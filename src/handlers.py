@@ -11,7 +11,7 @@ from telegram.error import TelegramError
 from telegram.ext import ContextTypes, CallbackContext
 
 from src.settings import get_settings
-from src.github_issue_api import Github
+from src.github_issue_api import Github, GithubIssueDisabledError
 from src.answers import ans
 
 settings = get_settings()
@@ -65,7 +65,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
         keyboard = __keyboard_repos(page)
 
     elif callback_data.startswith('repo_'):
-        keyboard, text = __create_issue(update)
+        keyboard, text = await __create_issue(update, context)
 
     elif callback_data.startswith('assign_'):
         page = int(callback_data.split('_')[1])
@@ -140,12 +140,19 @@ def __keyboard_assign(page):
     return InlineKeyboardMarkup(buttons)
 
 
-def __create_issue(update: Update):
+async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     repo_name = str(update.callback_query.data.split('_')[1])
     title, _, assigned, comment = __parse_text(update.callback_query.message.text)
 
     github_comment = ans['issue_open'].format(update.callback_query.from_user.full_name) + comment
-    r = github.open_issue(repo_name, title, github_comment)
+    try:
+        r = github.open_issue(repo_name, title, github_comment)
+    except GithubIssueDisabledError:
+        await context.bot.answer_callback_query(update.callback_query.id,
+                                                'Оказалось что для этого репозитория отключены Issue.'
+                                                '\nВключите их и попробуйте снова!')
+        text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
+        return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
 
     if r.status_code == 201:
         response = r.json()

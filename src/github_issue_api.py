@@ -22,6 +22,11 @@ class Github:
     def open_issue(self, repo, title, comment):
         payload = {'title': title, 'body': comment}
         r = requests.post(self.issue_url.format(repo), headers=self.headers, json=payload)
+        if 'Issues are disabled for this repo' in r.text:
+            raise GithubIssueDisabledError
+        if r.status_code != 201:
+            logging.error('Open issue error:', r.text)
+            raise GithubApiError
         logging.info('Open issue: {}'.format(r))
         return r
 
@@ -60,4 +65,8 @@ class Github:
 
 
 class GithubApiError(Exception):
+    pass
+
+
+class GithubIssueDisabledError(Exception):
     pass
