@@ -32,12 +32,14 @@ def handler(func):
 
 @handler
 async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Start message', disable_web_page_preview=True, parse_mode=ParseMode('HTML'))
+    await update.message.reply_text('Чтобы создать issue из личных сообщений, упомяните меня в вашем сообщении',
+                                    disable_web_page_preview=True, parse_mode=ParseMode('HTML'))
 
 
 @handler
 async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Help message', disable_web_page_preview=True, parse_mode=ParseMode('HTML'))
+    await update.message.reply_text(ans['help'].format(settings.BOT_NICKNAME),
+                                    disable_web_page_preview=True, parse_mode=ParseMode('HTML'))
 
 
 @handler
