@@ -5,13 +5,14 @@ import logging
 import time
 import traceback
 
-import requests
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.error import TelegramError
 from telegram.ext import ContextTypes, CallbackContext
 
 from src.settings import get_settings
+from src.github_issue_api import Github
 
 settings = get_settings()
 
@@ -81,6 +82,23 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
     repo_name = 'No repo'
     assigned = 'No assigned'
     answer = f'🔘 {issue_title}\n🗃 {repo_name}\n👤 {assigned}\nℹ️ {comment}'
+
+    # github = Github('Annndruha', 'issue-github-telegram-bot', settings.GITHUB_ORGANIZATION_TOKEN)
+    # github.open_issue('2')
+
+    # from github import Github
+    #
+    # # First create a Github instance:
+    #
+    # # using an access token
+    # g = Github(settings.GITHUB_ORGANIZATION_TOKEN)
+    #
+    # # Github Enterprise with custom hostname
+    # g = Github(base_url="https://api.github.com/api/v3", login_or_token=settings.GITHUB_ORGANIZATION_TOKEN)
+    #
+    # # Then play with your Github objects:
+    # for repo in g.get_user().get_repos():
+    #     print(repo.name)
 
     keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
     await context.bot.send_message(chat_id=update.message.chat_id,
