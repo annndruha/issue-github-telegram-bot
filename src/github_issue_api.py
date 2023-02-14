@@ -7,14 +7,15 @@ import requests
 
 
 class Github:
-    def __init__(self, organization_url, token):
-        self.url = 'https://api.github.com/repos/' + organization_url + '/{}/issues'
+    def __init__(self, organization_nickname, token):
+        self.issue_url = 'https://api.github.com/repos/' + organization_nickname + '/{}/issues'
+        self.org_repos_url = f'https://api.github.com/orgs/{organization_nickname}/repos'
 
         self.headers = {
             'Accept': 'application/vnd.github+json',
             'Authorization': f'Bearer {token}',
-            # 'X-GitHub-Api-Version': '2022-11-28',
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-GitHub-Api-Version': '2022-11-28',
+            'Content-Type': 'application/x-www-form-urlencoded'
         }
 
     # def get_issue(self, number):
@@ -45,10 +46,22 @@ class Github:
     #     return response.status_code
 
     def open_issue(self, repo, title):
-        data = f'{"title":"{title}"}'
-        r = requests.post(self.url.format(repo), headers=self.headers, data=data)
+        data = {'title': f'{title}'}
+        r = requests.post(self.issue_url.format(repo), headers=self.headers, data=data)
         logging.info('Open issue: {}'.format(r))
-        return r.status_code
+        return r
+
+    def get_repos(self, page):
+        data = {'sort': 'updated', 'per_page': 9, 'page': page}
+        r = requests.get(self.org_repos_url, headers=self.headers, params=data)
+        repos = r.json()
+        return repos
+
+    def get_all_repos(self):
+        data = {'sort': 'updated'}
+        r = requests.get(self.org_repos_url, headers=self.headers, params=data)
+        repos = r.json()
+        return repos
 
     # def get_comments(self, number):
     #     url = '{}/{}/comments'.format(self.url, number)

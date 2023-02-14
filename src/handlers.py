@@ -5,7 +5,6 @@ import logging
 import time
 import traceback
 
-
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
 from telegram.error import TelegramError
@@ -15,6 +14,7 @@ from src.settings import get_settings
 from src.github_issue_api import Github
 
 settings = get_settings()
+github = Github('profcomff', settings.GITHUB_ORGANIZATION_TOKEN)
 
 
 def handler(func):
@@ -41,22 +41,31 @@ async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @handler
 async def handler_button(update: Update, context: CallbackContext) -> None:
-    try:
-        d = {
-            'setup': InlineKeyboardMarkup([[InlineKeyboardButton('⬅️', callback_data='back'),
-                                            InlineKeyboardButton('👤', callback_data='assign'),
-                                            InlineKeyboardButton('🗃', callback_data='repo'),
-                                            InlineKeyboardButton('❌', callback_data='close')]]),
-            'back': InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
-        }
-        keyboard = d[update.callback_query.data]
-    except KeyError:
+    callback_data = update.callback_query.data
+    text = update.callback_query.message.text
+
+    if callback_data == 'setup':
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
+                                          InlineKeyboardButton('🗃', callback_data='repos_1'),
+                                          InlineKeyboardButton('👤', callback_data='assign'),
+                                          InlineKeyboardButton('❌', callback_data='close')]])
+    elif callback_data == 'quite':
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
+
+    elif callback_data.startswith('repos_'):
+        page = int(callback_data.split('_')[1])
+        keyboard = __keyboard_repos(page)
+
+    elif callback_data.startswith('repo_'):
+        repo_name = str(callback_data.split('_')[1])
+        keyboard, text = __create_issue(repo_name, update)
+
+    else:
         await update.callback_query.edit_message_text(text='Видимо бот обновился, эту issue нельзя настроить',
                                                       disable_web_page_preview=True,
                                                       parse_mode=ParseMode('HTML'))
         return
 
-    text = update.callback_query.message.text
     await update.callback_query.edit_message_text(text=text,
                                                   reply_markup=keyboard,
                                                   disable_web_page_preview=True,
@@ -72,6 +81,47 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
     if len(text) == 0:
         return
 
+    text = __create_base_message_text(text)
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
+    await context.bot.send_message(chat_id=update.message.chat_id,
+                                   text=text,
+                                   reply_markup=keyboard,
+                                   disable_web_page_preview=True,
+                                   parse_mode=ParseMode('HTML'))
+
+
+def __keyboard_repos(page):
+    repos = github.get_repos(page)
+    if len(repos) == 0:
+        page = 1
+        repos = github.get_repos(page)
+        if len(repos) == 0:
+            return InlineKeyboardMarkup([[InlineKeyboardButton('↩️ Выйти', callback_data='quite')]])
+
+    buttons = [[InlineKeyboardButton(repo['name'], callback_data='repo_' + repo['name'])] for repo in repos]
+    buttons.append([])
+    if page > 1:
+        buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=f'repos_{page - 1}'))
+    buttons[-1].append(InlineKeyboardButton('↩️ Выйти', callback_data='quite'))
+    buttons[-1].append(InlineKeyboardButton('➡️', callback_data=f'repos_{page + 1}'))
+
+    return InlineKeyboardMarkup(buttons)
+
+
+def __create_issue(repo_name: str, update: Update):
+    title, old_repo_name, assigned, comment = __parse_text(update.callback_query.message.text)
+    # TODO: Repo changed, assigned changed
+
+    r = github.open_issue(repo_name, title)
+    if r == 200:
+        text = __join_to_message_text(title, repo_name, assigned, comment, '✅')
+    else:
+        text = __join_to_message_text(title, 'No repo', assigned, comment, '🔘')
+
+    return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
+
+
+def __create_base_message_text(text):
     if len(text.split('\n')) == 1:
         issue_title = text
         comment = ''
@@ -81,28 +131,21 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
 
     repo_name = 'No repo'
     assigned = 'No assigned'
-    answer = f'🔘 {issue_title}\n🗃 {repo_name}\n👤 {assigned}\nℹ️ {comment}'
+    answer = f'🔘 {issue_title}\n🗃 {repo_name}\n👤 {assigned}'
+    answer = answer + f'\nℹ️ {comment}' if comment != '' else answer
+    return answer
 
-    # github = Github('Annndruha', 'issue-github-telegram-bot', settings.GITHUB_ORGANIZATION_TOKEN)
-    # github.open_issue('2')
 
-    # from github import Github
-    #
-    # # First create a Github instance:
-    #
-    # # using an access token
-    # g = Github(settings.GITHUB_ORGANIZATION_TOKEN)
-    #
-    # # Github Enterprise with custom hostname
-    # g = Github(base_url="https://api.github.com/api/v3", login_or_token=settings.GITHUB_ORGANIZATION_TOKEN)
-    #
-    # # Then play with your Github objects:
-    # for repo in g.get_user().get_repos():
-    #     print(repo.name)
+def __join_to_message_text(title, repo_name, assigned, comment, flag='✅'):
+    answer = f'{flag} {title}\n🗃 {repo_name}\n👤 {assigned}'
+    answer = answer + f'\nℹ️ {comment}' if comment != '' else answer
+    return answer
 
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
-    await context.bot.send_message(chat_id=update.message.chat_id,
-                                   text=answer,
-                                   reply_markup=keyboard,
-                                   disable_web_page_preview=True,
-                                   parse_mode=ParseMode('HTML'))
+
+def __parse_text(text):
+    stext = text.split('\n')
+    if len(stext) == 3:
+        return stext[0].replace('🔘 ', '').replace('✅ ', ''), stext[1].replace('🗃 ', ''), stext[2].replace('👤 ', ''), ''
+    else:
+        comment = '\n'.join(stext[3:]).replace('ℹ️ ', '')
+        return stext[0].replace('🔘 ', '').replace('✅ ', ''), stext[1].replace('🗃 ', ''), stext[2].replace('👤 ', ''), comment
