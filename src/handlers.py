@@ -15,7 +15,7 @@ from src.github_issue_api import Github
 from src.answers import ans
 
 settings = get_settings()
-github = Github(settings.GITHUB_ORGANIZATION_NICKNAME, settings.GITHUB_ACCOUNT_TOKEN)
+github = Github(settings.GH_ORGANIZATION_NICKNAME, settings.GH_ACCOUNT_TOKEN)
 
 
 def handler(func):
