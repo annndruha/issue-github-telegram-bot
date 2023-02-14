@@ -32,14 +32,20 @@ def handler(func):
 
 @handler
 async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Чтобы создать issue из личных сообщений, упомяните меня в вашем сообщении',
-                                    disable_web_page_preview=True, parse_mode=ParseMode('HTML'))
+    await context.bot.send_message(chat_id=update.message.chat_id,
+                                   message_thread_id=update.message.message_thread_id,
+                                   text=ans['start'].format(settings.GH_ORGANIZATION_NICKNAME),
+                                   disable_web_page_preview=True,
+                                   parse_mode=ParseMode('HTML'))
 
 
 @handler
 async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(ans['help'].format(settings.BOT_NICKNAME),
-                                    disable_web_page_preview=True, parse_mode=ParseMode('HTML'))
+    await context.bot.send_message(chat_id=update.message.chat_id,
+                                   message_thread_id=update.message.message_thread_id,
+                                   text=ans['help'].format(settings.BOT_NICKNAME),
+                                   disable_web_page_preview=True,
+                                   parse_mode=ParseMode('HTML'))
 
 
 @handler
@@ -95,11 +101,14 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
         return
     text = update.message.text.replace(settings.BOT_NICKNAME, '').strip()
     if len(text) == 0:
-        return
+        text = 'После упоминания требуется ввести название issue. Больше в /help'
+        keyboard = None
+    else:
+        text = __create_base_message_text(text)
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
 
-    text = __create_base_message_text(text)
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
     await context.bot.send_message(chat_id=update.message.chat_id,
+                                   message_thread_id=update.message.message_thread_id,
                                    text=text,
                                    reply_markup=keyboard,
                                    disable_web_page_preview=True,
