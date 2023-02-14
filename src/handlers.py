@@ -12,6 +12,7 @@ from telegram.ext import ContextTypes, CallbackContext
 
 from src.settings import get_settings
 from src.github_issue_api import Github
+from src.answers import ans
 
 settings = get_settings()
 github = Github(settings.GITHUB_ORGANIZATION_NICKNAME, settings.GITHUB_ACCOUNT_TOKEN)
@@ -141,18 +142,16 @@ def __keyboard_assign(page):
 
 def __create_issue(update: Update):
     repo_name = str(update.callback_query.data.split('_')[1])
-    title, old_repo_name, assigned, comment = __parse_text(update.callback_query.message.text)
-    # TODO: Repo changed, assigned changed
+    title, _, assigned, comment = __parse_text(update.callback_query.message.text)
 
-    github_comment = f'**Issue open by {update.callback_query.from_user.full_name}  via <a href="https://github.com/Annndruha/issue-github-telegram-bot">Issue Telegram Bot</a>**\n\n' + comment
-
+    github_comment = ans['issue_open'].format(update.callback_query.from_user.full_name) + comment
     r = github.open_issue(repo_name, title, github_comment)
+
     if r.status_code == 201:
         response = r.json()
-        assignees = response['assignees']
-        title = f'''<a href="{response['html_url']}">{title}</a>'''
-        'https://api.github.com/repos/profcomff/print-tgbot'
-        repo_name = f'''<a href="{response['repository_url'].replace('api.github.com/repos', 'github.com')}">{repo_name}</a>'''
+        title = ans['link'].format(response['html_url'], title)
+        repo_link = response['repository_url'].replace('api.github.com/repos', 'github.com')
+        repo_name = ans['link'].format(repo_link, repo_name)
         text = __join_to_message_text(title, repo_name, assigned, comment, '📂')
     else:
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
@@ -167,9 +166,10 @@ def __set_assign(update: Update):
     issue_number_str = title.split('/issues/')[1].split('"')[0]
 
     r_old = github.get_issue(clean_repo_name, issue_number_str)
-    assigned = f'''<a href="https://github.com/{member_login}">{member_login}</a>'''
-    assign_github_comment = r_old['body'] + f'\n\n**Assign changed from {old_assigned} to {assigned} ' \
-                                            f'by {update.callback_query.from_user.full_name} via <a href="https://github.com/Annndruha/issue-github-telegram-bot">Issue Telegram Bot</a>**'
+    assigned = ans['member_to_login'].format(member_login, member_login)
+    assign_github_comment = r_old['body'] + ans['assign_change'].format(old_assigned, assigned,
+                                                                        update.callback_query.from_user.full_name)
+
     github.set_assignee(clean_repo_name, issue_number_str, member_login, assign_github_comment)
 
     text = __join_to_message_text(title, repo_name, assigned, comment)
@@ -183,7 +183,7 @@ def __close_issue(update: Update):
     issue_number_str = title.split('/issues/')[1].split('"')[0]
 
     r_old = github.get_issue(repo_name, issue_number_str)
-    close_github_comment = r_old['body'] + f'\n\n**Issue closed by {update.callback_query.from_user.full_name}  via <a href="https://github.com/Annndruha/issue-github-telegram-bot">Issue Telegram Bot</a>**'
+    close_github_comment = r_old['body'] + ans['issue_close'].format(update.callback_query.from_user.full_name)
 
     github.close_issue(repo_name, issue_number_str, close_github_comment)
     text = f'Issue {title} closed by {update.callback_query.from_user.full_name}'
