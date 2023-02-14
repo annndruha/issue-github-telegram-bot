@@ -137,14 +137,16 @@ def __create_issue(update: Update):
 
 
 def __close_issue(update: Update):
-    title, repo_name, assigned, comment = __parse_text(update.callback_query.message.text_html)
+    title, _, _, _ = __parse_text(update.callback_query.message.text_html)
+    _, repo_name, _, _ = __parse_text(update.callback_query.message.text)
+    issue_number_str = title.split('/issues/')[1].split('"')[0]
 
-    github_comment = f'**Issue closed by {update.callback_query.from_user.full_name} via Telegram bot**\n\n' + comment
+    r_old = github.get_issue(repo_name, issue_number_str)
+    close_github_comment = r_old['body'] + f'\n\n**Issue closed by {update.callback_query.from_user.full_name} via Telegram bot**'
 
+    r = github.close_issue(repo_name, issue_number_str, close_github_comment)
 
-    # r = github.close_issue(repo_name, title, github_comment)
-
-    text = 'Issue {} closed'
+    text = f'Issue {title} closed by {update.callback_query.from_user.full_name}'
 
     return None, text
 
