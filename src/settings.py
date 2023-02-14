@@ -5,8 +5,9 @@ from functools import lru_cache
 class Settings(BaseSettings):
     """Application settings"""
     BOT_TOKEN: str
-    GITHUB_ORGANIZATION_TOKEN: str
     BOT_NICKNAME: str
+    GITHUB_ACCOUNT_TOKEN: str
+    GITHUB_ORGANIZATION_NICKNAME: str
 
     class Config:
         """Pydantic BaseSettings config"""

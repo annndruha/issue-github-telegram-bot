@@ -14,7 +14,7 @@ from src.settings import get_settings
 from src.github_issue_api import Github
 
 settings = get_settings()
-github = Github('profcomff', settings.GITHUB_ORGANIZATION_TOKEN)
+github = Github(settings.GITHUB_ORGANIZATION_NICKNAME, settings.GITHUB_ACCOUNT_TOKEN)
 
 
 def handler(func):
@@ -144,10 +144,8 @@ def __close_issue(update: Update):
     r_old = github.get_issue(repo_name, issue_number_str)
     close_github_comment = r_old['body'] + f'\n\n**Issue closed by {update.callback_query.from_user.full_name} via Telegram bot**'
 
-    r = github.close_issue(repo_name, issue_number_str, close_github_comment)
-
+    github.close_issue(repo_name, issue_number_str, close_github_comment)
     text = f'Issue {title} closed by {update.callback_query.from_user.full_name}'
-
     return None, text
 
 

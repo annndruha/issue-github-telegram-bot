@@ -1,6 +1,6 @@
 # Marakulin Andrey https://github.com/Annndruha
 # 2023
-import json
+
 import logging
 
 import requests
@@ -17,27 +17,6 @@ class Github:
             'X-GitHub-Api-Version': '2022-11-28',
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-
-    # def get_issue(self, number):
-    #     url = '{}/{}'.format(self.url, number)
-    #     response = requests.get(url, auth=self.auth)
-    #     logging.info('Get issue: {}'.format(response))
-    #     return response.json(), response.status_code
-    #
-    # def comment_issue(self, number, text):
-    #     url = '{}/{}/comments'.format(self.url, number)
-    #     payload = {'body': text}
-    #     response = requests.post(url, json=payload, auth=self.auth)
-    #     logging.info('Comment issue: {}'.format(response))
-    #     return response.status_code
-    #
-    # def label_issue(self, number, label):
-    #     url = '{}/{}/labels'.format(self.url, number)
-    #     payload = [label.strip()]
-    #     response = requests.post(url, json=payload, auth=self.auth)
-    #     logging.info('Label issue: {}'.format(response))
-    #     return response.status_code
-    #
 
     def open_issue(self, repo, title, comment):
         payload = {'title': title, 'body': comment}
@@ -59,16 +38,18 @@ class Github:
     def close_issue(self, repo, number_str, comment=''):
         url = self.issue_url.format(repo) + '/' + number_str
         payload = {'state': 'closed', 'body': comment}
-        response = requests.patch(url, headers=self.headers, json=payload)
-        logging.info('Close issue: {}'.format(response))
-        return response.status_code
+        r = requests.patch(url, headers=self.headers, json=payload)
+        if r.status_code != 200:
+            raise GithubApiError
+        logging.info('Close issue: {}'.format(r))
 
     def get_issue(self, repo, number_str):
         url = self.issue_url.format(repo) + '/' + number_str
         r = requests.get(url, headers=self.headers)
+        if r.status_code != 200:
+            raise GithubApiError
         return r.json()
 
-    # def get_comments(self, number):
-    #     url = '{}/{}/comments'.format(self.url, number)
-    #     response = requests.get(url, auth=self.auth)
-    #     return response.json()
+
+class GithubApiError(Exception):
+    pass
