@@ -45,10 +45,15 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
     text = update.callback_query.message.text
 
     if callback_data == 'setup':
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
-                                          InlineKeyboardButton('🗃', callback_data='repos_1'),
-                                          InlineKeyboardButton('👤', callback_data='assign'),
-                                          InlineKeyboardButton('❌', callback_data='close')]])
+        title, old_repo_name, assigned, comment = __parse_text(update.callback_query.message.text)
+        if old_repo_name == 'No repo':
+            keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
+                                              InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]])
+        else:
+            keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
+                                              # InlineKeyboardButton('📂', callback_data='repos_1'),
+                                              InlineKeyboardButton('👤', callback_data='assign'),
+                                              InlineKeyboardButton('❌', callback_data='close')]])
     elif callback_data == 'quite':
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
 
@@ -112,11 +117,13 @@ def __create_issue(repo_name: str, update: Update):
     title, old_repo_name, assigned, comment = __parse_text(update.callback_query.message.text)
     # TODO: Repo changed, assigned changed
 
-    r = github.open_issue(repo_name, title)
-    if r == 200:
-        text = __join_to_message_text(title, repo_name, assigned, comment, '✅')
+    github_comment = f'**Issue open by {update.callback_query.from_user.full_name} via Telegram bot**\n\n' + comment
+
+    r = github.open_issue(repo_name, title, github_comment)
+    if r == 201:
+        text = __join_to_message_text(title, repo_name, assigned, comment, '📂')
     else:
-        text = __join_to_message_text(title, 'No repo', assigned, comment, '🔘')
+        text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
 
     return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
 
@@ -131,13 +138,13 @@ def __create_base_message_text(text):
 
     repo_name = 'No repo'
     assigned = 'No assigned'
-    answer = f'🔘 {issue_title}\n🗃 {repo_name}\n👤 {assigned}'
+    answer = f'🔘 {issue_title}\n⚠️ {repo_name}\n👤 {assigned}'
     answer = answer + f'\nℹ️ {comment}' if comment != '' else answer
     return answer
 
 
-def __join_to_message_text(title, repo_name, assigned, comment, flag='✅'):
-    answer = f'{flag} {title}\n🗃 {repo_name}\n👤 {assigned}'
+def __join_to_message_text(title, repo_name, assigned, comment, flag='📂'):
+    answer = f'🔘 {title}\n{flag} {repo_name}\n👤 {assigned}'
     answer = answer + f'\nℹ️ {comment}' if comment != '' else answer
     return answer
 
@@ -145,7 +152,7 @@ def __join_to_message_text(title, repo_name, assigned, comment, flag='✅'):
 def __parse_text(text):
     stext = text.split('\n')
     if len(stext) == 3:
-        return stext[0].replace('🔘 ', '').replace('✅ ', ''), stext[1].replace('🗃 ', ''), stext[2].replace('👤 ', ''), ''
+        return stext[0].replace('🔘 ', ''), stext[1].replace('📂 ', '').replace('⚠️ ', ''), stext[2].replace('👤 ', ''), ''
     else:
         comment = '\n'.join(stext[3:]).replace('ℹ️ ', '')
-        return stext[0].replace('🔘 ', '').replace('✅ ', ''), stext[1].replace('🗃 ', ''), stext[2].replace('👤 ', ''), comment
+        return stext[0].replace('🔘 ', ''), stext[1].replace('📂 ', '').replace('⚠️ ', ''), stext[2].replace('👤 ', ''), comment

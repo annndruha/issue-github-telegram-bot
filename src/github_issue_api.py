@@ -1,6 +1,6 @@
 # Marakulin Andrey https://github.com/Annndruha
 # 2023
-
+import json
 import logging
 
 import requests
@@ -45,11 +45,12 @@ class Github:
     #     logging.info('Close issue: {}'.format(response))
     #     return response.status_code
 
-    def open_issue(self, repo, title):
-        data = {'title': f'{title}'}
+    def open_issue(self, repo, title, comment):
+        data = {'title': f'{title}', 'body': f'{comment}'}
+        data = str(json.dumps(data))
         r = requests.post(self.issue_url.format(repo), headers=self.headers, data=data)
         logging.info('Open issue: {}'.format(r))
-        return r
+        return r.status_code
 
     def get_repos(self, page):
         data = {'sort': 'updated', 'per_page': 9, 'page': page}
