@@ -144,7 +144,7 @@ def __create_issue(update: Update):
     title, old_repo_name, assigned, comment = __parse_text(update.callback_query.message.text)
     # TODO: Repo changed, assigned changed
 
-    github_comment = f'**Issue open by {update.callback_query.from_user.full_name} via Telegram bot**\n\n' + comment
+    github_comment = f'**Issue open by {update.callback_query.from_user.full_name}  via <a href="https://github.com/Annndruha/issue-github-telegram-bot">Issue Telegram Bot</a>**\n\n' + comment
 
     r = github.open_issue(repo_name, title, github_comment)
     if r.status_code == 201:
@@ -166,9 +166,12 @@ def __set_assign(update: Update):
     title, repo_name, old_assigned, comment = __parse_text(update.callback_query.message.text_html)
     issue_number_str = title.split('/issues/')[1].split('"')[0]
 
-    github.set_assignee(clean_repo_name, issue_number_str, member_login)
-
+    r_old = github.get_issue(clean_repo_name, issue_number_str)
     assigned = f'''<a href="https://github.com/{member_login}">{member_login}</a>'''
+    assign_github_comment = r_old['body'] + f'\n\n**Assign changed from {old_assigned} to {assigned} ' \
+                                            f'by {update.callback_query.from_user.full_name} via <a href="https://github.com/Annndruha/issue-github-telegram-bot">Issue Telegram Bot</a>**'
+    github.set_assignee(clean_repo_name, issue_number_str, member_login, assign_github_comment)
+
     text = __join_to_message_text(title, repo_name, assigned, comment)
 
     return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
@@ -180,7 +183,7 @@ def __close_issue(update: Update):
     issue_number_str = title.split('/issues/')[1].split('"')[0]
 
     r_old = github.get_issue(repo_name, issue_number_str)
-    close_github_comment = r_old['body'] + f'\n\n**Issue closed by {update.callback_query.from_user.full_name} via Telegram bot**'
+    close_github_comment = r_old['body'] + f'\n\n**Issue closed by {update.callback_query.from_user.full_name}  via <a href="https://github.com/Annndruha/issue-github-telegram-bot">Issue Telegram Bot</a>**'
 
     github.close_issue(repo_name, issue_number_str, close_github_comment)
     text = f'Issue {title} closed by {update.callback_query.from_user.full_name}'

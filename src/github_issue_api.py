@@ -50,9 +50,9 @@ class Github:
         r = requests.get(self.org_members_url, headers=self.headers, params=data)
         return r.json()
 
-    def set_assignee(self, repo, number_str, member_login):
+    def set_assignee(self, repo, number_str, member_login, comment):
         url = self.issue_url.format(repo) + '/' + number_str
-        payload = {'assignees': [member_login]}
+        payload = {'assignees': [member_login], 'body': comment}
         r = requests.patch(url, headers=self.headers, json=payload)
         logging.info('Set assignee issue: {}'.format(r))
         if r.status_code != 200:
