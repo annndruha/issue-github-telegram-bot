@@ -42,10 +42,10 @@ async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @handler
 async def handler_button(update: Update, context: CallbackContext) -> None:
     callback_data = update.callback_query.data
-    text = update.callback_query.message.text
+    text = update.callback_query.message.text_html
 
     if callback_data == 'setup':
-        title, old_repo_name, assigned, comment = __parse_text(update.callback_query.message.text)
+        _, old_repo_name, _, _ = __parse_text(update.callback_query.message.text)
         if old_repo_name == 'No repo':
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
                                               InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]])
@@ -57,13 +57,15 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
     elif callback_data == 'quite':
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
 
+    elif callback_data == 'close':
+        keyboard, text = __close_issue(update)
+
     elif callback_data.startswith('repos_'):
         page = int(callback_data.split('_')[1])
         keyboard = __keyboard_repos(page)
 
     elif callback_data.startswith('repo_'):
-        repo_name = str(callback_data.split('_')[1])
-        keyboard, text = __create_issue(repo_name, update)
+        keyboard, text = __create_issue(update)
 
     else:
         await update.callback_query.edit_message_text(text='Видимо бот обновился, эту issue нельзя настроить',
@@ -113,19 +115,38 @@ def __keyboard_repos(page):
     return InlineKeyboardMarkup(buttons)
 
 
-def __create_issue(repo_name: str, update: Update):
+def __create_issue(update: Update):
+    repo_name = str(update.callback_query.data.split('_')[1])
     title, old_repo_name, assigned, comment = __parse_text(update.callback_query.message.text)
     # TODO: Repo changed, assigned changed
 
     github_comment = f'**Issue open by {update.callback_query.from_user.full_name} via Telegram bot**\n\n' + comment
 
     r = github.open_issue(repo_name, title, github_comment)
-    if r == 201:
+    if r.status_code == 201:
+        response = r.json()
+        assignees = response['assignees']
+        title = f'''<a href="{response['html_url']}">{title}</a>'''
+        'https://api.github.com/repos/profcomff/print-tgbot'
+        repo_name = f'''<a href="{response['repository_url'].replace('api.github.com/repos', 'github.com')}">{repo_name}</a>'''
         text = __join_to_message_text(title, repo_name, assigned, comment, '📂')
     else:
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
 
     return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
+
+
+def __close_issue(update: Update):
+    title, repo_name, assigned, comment = __parse_text(update.callback_query.message.text_html)
+
+    github_comment = f'**Issue closed by {update.callback_query.from_user.full_name} via Telegram bot**\n\n' + comment
+
+
+    # r = github.close_issue(repo_name, title, github_comment)
+
+    text = 'Issue {} closed'
+
+    return None, text
 
 
 def __create_base_message_text(text):

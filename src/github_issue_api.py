@@ -50,7 +50,7 @@ class Github:
         data = str(json.dumps(data))
         r = requests.post(self.issue_url.format(repo), headers=self.headers, data=data)
         logging.info('Open issue: {}'.format(r))
-        return r.status_code
+        return r
 
     def get_repos(self, page):
         data = {'sort': 'updated', 'per_page': 9, 'page': page}
