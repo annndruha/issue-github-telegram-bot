@@ -51,8 +51,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
                                               InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]])
         else:
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
-                                              # InlineKeyboardButton('📂', callback_data='repos_1'),
-                                              InlineKeyboardButton('👤', callback_data='assign'),
+                                              InlineKeyboardButton('👤', callback_data='assign_1'),
                                               InlineKeyboardButton('❌', callback_data='close')]])
     elif callback_data == 'quite':
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
@@ -66,6 +65,13 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
 
     elif callback_data.startswith('repo_'):
         keyboard, text = __create_issue(update)
+
+    elif callback_data.startswith('assign_'):
+        page = int(callback_data.split('_')[1])
+        keyboard = __keyboard_assign(page)
+
+    elif callback_data.startswith('member_'):
+        keyboard, text = __set_assign(update)
 
     else:
         await update.callback_query.edit_message_text(text='Видимо бот обновился, эту issue нельзя настроить',
@@ -115,6 +121,24 @@ def __keyboard_repos(page):
     return InlineKeyboardMarkup(buttons)
 
 
+def __keyboard_assign(page):
+    members = github.get_members(page)
+    if len(members) == 0:
+        page = 1
+        members = github.get_members(page)
+        if len(members) == 0:
+            return InlineKeyboardMarkup([[InlineKeyboardButton('↩️ Выйти', callback_data='quite')]])
+
+    buttons = [[InlineKeyboardButton(member['login'], callback_data='member_' + member['login'])] for member in members]
+    buttons.append([])
+    if page > 1:
+        buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=f'assign_{page - 1}'))
+    buttons[-1].append(InlineKeyboardButton('↩️ Выйти', callback_data='quite'))
+    buttons[-1].append(InlineKeyboardButton('➡️', callback_data=f'assign_{page + 1}'))
+
+    return InlineKeyboardMarkup(buttons)
+
+
 def __create_issue(update: Update):
     repo_name = str(update.callback_query.data.split('_')[1])
     title, old_repo_name, assigned, comment = __parse_text(update.callback_query.message.text)
@@ -132,6 +156,20 @@ def __create_issue(update: Update):
         text = __join_to_message_text(title, repo_name, assigned, comment, '📂')
     else:
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
+
+    return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
+
+
+def __set_assign(update: Update):
+    member_login = str(update.callback_query.data.split('_')[1])
+    _, clean_repo_name, _, _ = __parse_text(update.callback_query.message.text)
+    title, repo_name, old_assigned, comment = __parse_text(update.callback_query.message.text_html)
+    issue_number_str = title.split('/issues/')[1].split('"')[0]
+
+    github.set_assignee(clean_repo_name, issue_number_str, member_login)
+
+    assigned = f'''<a href="https://github.com/{member_login}">{member_login}</a>'''
+    text = __join_to_message_text(title, repo_name, assigned, comment)
 
     return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
 

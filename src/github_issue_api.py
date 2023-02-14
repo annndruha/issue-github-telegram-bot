@@ -10,6 +10,7 @@ class Github:
     def __init__(self, organization_nickname, token):
         self.issue_url = 'https://api.github.com/repos/' + organization_nickname + '/{}/issues'
         self.org_repos_url = f'https://api.github.com/orgs/{organization_nickname}/repos'
+        self.org_members_url = f'https://api.github.com/orgs/{organization_nickname}/members'
 
         self.headers = {
             'Accept': 'application/vnd.github+json',
@@ -25,15 +26,9 @@ class Github:
         return r
 
     def get_repos(self, page):
-        data = {'sort': 'updated', 'per_page': 9, 'page': page}
+        data = {'sort': 'full_name', 'per_page': 9, 'page': page}
         r = requests.get(self.org_repos_url, headers=self.headers, params=data)
         return r.json()
-
-    def get_all_repos(self):
-        data = {'sort': 'updated'}
-        r = requests.get(self.org_repos_url, headers=self.headers, params=data)
-        repos = r.json()
-        return repos
 
     def close_issue(self, repo, number_str, comment=''):
         url = self.issue_url.format(repo) + '/' + number_str
@@ -49,6 +44,19 @@ class Github:
         if r.status_code != 200:
             raise GithubApiError
         return r.json()
+
+    def get_members(self, page):
+        data = {'sort': 'full_name', 'per_page': 9, 'page': page}
+        r = requests.get(self.org_members_url, headers=self.headers, params=data)
+        return r.json()
+
+    def set_assignee(self, repo, number_str, member_login):
+        url = self.issue_url.format(repo) + '/' + number_str
+        payload = {'assignees': [member_login]}
+        r = requests.patch(url, headers=self.headers, json=payload)
+        logging.info('Set assignee issue: {}'.format(r))
+        if r.status_code != 200:
+            raise GithubApiError
 
 
 class GithubApiError(Exception):
