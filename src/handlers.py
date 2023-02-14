@@ -24,17 +24,13 @@ def handler(func):
             logging.error(f'Exception {str(err.args)}, traceback:')
             traceback.print_tb(err.__traceback__)
             time.sleep(2)
+
     return wrapper
 
 
 @handler
 async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Start message', disable_web_page_preview=True, parse_mode=ParseMode('HTML'))
-    # keyboard_base = [[InlineKeyboardButton(ans['about'], callback_data='to_about')]]
-    # text, reply_markup = __change_message_by_auth(update, ans['hello'], keyboard_base)
-    # await update.message.reply_text(text=text,
-    #                                 reply_markup=reply_markup,
-    #                                 disable_web_page_preview=True)
 
 
 @handler
@@ -44,32 +40,51 @@ async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @handler
 async def handler_button(update: Update, context: CallbackContext) -> None:
-    pass
-    # if update.callback_query.data == 'to_hello':
-    #     keyboard_base = [[InlineKeyboardButton(ans['about'], callback_data='to_about')]]
-    #     text, reply_markup = __change_message_by_auth(update, ans['hello'], keyboard_base)
-    #
-    # elif update.callback_query.data == 'to_about':
-    #     keyboard_base = [[InlineKeyboardButton(ans['back'], callback_data='to_hello')]]
-    #     text, reply_markup = __change_message_by_auth(update, ans['help'], keyboard_base)
-    #
-    # elif update.callback_query.data == 'to_auth':
-    #     keyboard_base = [[InlineKeyboardButton(ans['back'], callback_data='to_hello')]]
-    #     text, reply_markup = ans['val_need'], InlineKeyboardMarkup(keyboard_base)
-    #
-    # elif update.callback_query.data.startswith('print_'):
-    #     await __print_settings_solver(update, context)
-    #     return
-    #
-    # else:
-    #     text, reply_markup = ans['unknown_keyboard_payload'], None
-    #
-    # await update.callback_query.edit_message_text(text=text,
-    #                                               reply_markup=reply_markup,
-    #                                               disable_web_page_preview=True,
-    #                                               parse_mode=ParseMode('HTML'))
+    try:
+        d = {
+            'setup': InlineKeyboardMarkup([[InlineKeyboardButton('⬅️', callback_data='back'),
+                                            InlineKeyboardButton('👤', callback_data='assign'),
+                                            InlineKeyboardButton('🗃', callback_data='repo'),
+                                            InlineKeyboardButton('❌', callback_data='close')]]),
+            'back': InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
+        }
+        keyboard = d[update.callback_query.data]
+    except KeyError:
+        await update.callback_query.edit_message_text(text='Видимо бот обновился, эту issue нельзя настроить',
+                                                      disable_web_page_preview=True,
+                                                      parse_mode=ParseMode('HTML'))
+        return
+
+    text = update.callback_query.message.text
+    await update.callback_query.edit_message_text(text=text,
+                                                  reply_markup=keyboard,
+                                                  disable_web_page_preview=True,
+                                                  parse_mode=ParseMode('HTML'))
 
 
 @handler
 async def handler_message(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text('message message', disable_web_page_preview=True, parse_mode=ParseMode('HTML'))
+    mentions = update.effective_message.parse_entities(["mention"])
+    if settings.BOT_NICKNAME.lower() not in [mention.lower() for mention in list(mentions.values())]:
+        return
+    text = update.message.text.replace(settings.BOT_NICKNAME, '').strip()
+    if len(text) == 0:
+        return
+
+    if len(text.split('\n')) == 1:
+        issue_title = text
+        comment = ''
+    else:
+        issue_title = text.split('\n')[0]
+        comment = '\n'.join(text.split('\n')[1:])
+
+    repo_name = 'No repo'
+    assigned = 'No assigned'
+    answer = f'🔘 {issue_title}\n🗃 {repo_name}\n👤 {assigned}\nℹ️ {comment}'
+
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
+    await context.bot.send_message(chat_id=update.message.chat_id,
+                                   text=answer,
+                                   reply_markup=keyboard,
+                                   disable_web_page_preview=True,
+                                   parse_mode=ParseMode('HTML'))

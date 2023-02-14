@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     """Application settings"""
     BOT_TOKEN: str
     GITHUB_ORGANIZATION_TOKEN: str
+    BOT_NICKNAME: str
 
     class Config:
         """Pydantic BaseSettings config"""
