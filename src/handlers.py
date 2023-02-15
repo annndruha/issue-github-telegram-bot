@@ -25,7 +25,7 @@ def handler(func):
         except (TelegramError, Exception) as err:
             logging.error(f'Exception {str(err.args)}, traceback:')
             traceback.print_tb(err.__traceback__)
-            time.sleep(2)
+            time.sleep(5)
 
     return wrapper
 
@@ -37,6 +37,7 @@ async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    text=ans['start'].format(settings.GH_ORGANIZATION_NICKNAME),
                                    disable_web_page_preview=True,
                                    parse_mode=ParseMode('HTML'))
+    logging.info(f'[{update.message.from_user.id} {update.message.from_user.full_name}] call /start')
 
 
 @handler
@@ -46,18 +47,22 @@ async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    text=ans['help'].format(settings.BOT_NICKNAME),
                                    disable_web_page_preview=True,
                                    parse_mode=ParseMode('HTML'))
+    logging.info(f'[{update.message.from_user.id} {update.message.from_user.full_name}] call /help')
 
 
 @handler
 async def handler_button(update: Update, context: CallbackContext) -> None:
     callback_data = update.callback_query.data
+    logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
+                 f'[{update.callback_query.message.id}] button pressed with callback_data={callback_data}')
     text = update.callback_query.message.text_html
 
     if callback_data == 'setup':
         _, old_repo_name, _, _ = __parse_text(update.callback_query.message.text)
         if old_repo_name == 'No repo':
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
-                                              InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]])
+                                              InlineKeyboardButton('⚠️ Select repo to create',
+                                                                   callback_data='repos_1')]])
         else:
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
                                               InlineKeyboardButton('👤', callback_data='assign_1'),
@@ -86,6 +91,8 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
         await update.callback_query.edit_message_text(text='Видимо бот обновился, эту issue нельзя настроить',
                                                       disable_web_page_preview=True,
                                                       parse_mode=ParseMode('HTML'))
+        logging.error(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
+                      f' button pressed with old callback_data={callback_data}')
         return
 
     await update.callback_query.edit_message_text(text=text,
@@ -103,9 +110,12 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
     if len(text) == 0:
         text = 'После упоминания требуется ввести название issue. Больше в /help'
         keyboard = None
+        logging.warning(f'[{update.message.from_user.id} {update.message.from_user.full_name}] call with no title')
     else:
         text = __create_base_message_text(text)
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
+        logging.info(f'[{update.message.from_user.id} {update.message.from_user.full_name}]'
+                     f' create draft with message:{repr(update.message.text)}')
 
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
@@ -159,10 +169,10 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         r = github.open_issue(repo_name, title, github_comment)
     except GithubIssueDisabledError:
-        await context.bot.answer_callback_query(update.callback_query.id,
-                                                'Оказалось что для этого репозитория отключены Issue.'
-                                                '\nВключите их и попробуйте снова!')
+        await context.bot.answer_callback_query(update.callback_query.id, 'У этого репозитория отключены Issue.')
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
+        logging.warning(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
+                        f'[{update.callback_query.message.id}] Try to open issue, but issue for {repo_name} disabled')
         return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
 
     if r.status_code == 201:
@@ -171,8 +181,14 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         repo_link = response['repository_url'].replace('api.github.com/repos', 'github.com')
         repo_name = ans['link'].format(repo_link, repo_name)
         text = __join_to_message_text(title, repo_name, assigned, comment, '📂')
+        logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
+                     f'[{update.callback_query.message.id}] Succeeded open Issue: {response["html_url"]}')
+
     else:
+        await context.bot.answer_callback_query(update.callback_query.id, f'Response code: {r.status_code}')
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
+        logging.error(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
+                      f'[{update.callback_query.message.id}] Failed to open Issue [{r.status_code}] {r.text}')
 
     return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
 
@@ -183,12 +199,17 @@ def __set_assign(update: Update):
     title, repo_name, old_assigned, comment = __parse_text(update.callback_query.message.text_html)
     issue_number_str = title.split('/issues/')[1].split('"')[0]
 
-    r_old = github.get_issue(clean_repo_name, issue_number_str)
-    assigned = ans['member_to_login'].format(member_login, member_login)
-    assign_github_comment = r_old['body'] + ans['assign_change'].format(old_assigned, assigned,
-                                                                        update.callback_query.from_user.full_name)
+    r, status_code = github.get_issue(clean_repo_name, issue_number_str)
+    if status_code != 200:
+        return None, __get_problem(clean_repo_name, issue_number_str, r)
 
-    github.set_assignee(clean_repo_name, issue_number_str, member_login, assign_github_comment)
+    assigned = ans['member_to_login'].format(member_login, member_login)
+    assign_github_comment = r['body'] + ans['assign_change'].format(old_assigned, assigned,
+                                                                    update.callback_query.from_user.full_name)
+
+    r = github.set_assignee(clean_repo_name, issue_number_str, member_login, assign_github_comment)
+    if r.status_code != 200:
+        return None, __get_problem(clean_repo_name, issue_number_str, r)
 
     text = __join_to_message_text(title, repo_name, assigned, comment)
 
@@ -197,13 +218,19 @@ def __set_assign(update: Update):
 
 def __close_issue(update: Update):
     title, _, _, _ = __parse_text(update.callback_query.message.text_html)
-    _, repo_name, _, _ = __parse_text(update.callback_query.message.text)
+    _, clean_repo_name, _, _ = __parse_text(update.callback_query.message.text)
     issue_number_str = title.split('/issues/')[1].split('"')[0]
 
-    r_old = github.get_issue(repo_name, issue_number_str)
-    close_github_comment = r_old['body'] + ans['issue_close'].format(update.callback_query.from_user.full_name)
+    r, status_code = github.get_issue(clean_repo_name, issue_number_str)
+    if status_code != 200:
+        return None, __get_problem(clean_repo_name, issue_number_str, r)
 
-    github.close_issue(repo_name, issue_number_str, close_github_comment)
+    close_github_comment = r['body'] + ans['issue_close'].format(update.callback_query.from_user.full_name)
+
+    r = github.close_issue(clean_repo_name, issue_number_str, close_github_comment)
+    if r.status_code != 200:
+        return None, __get_problem(clean_repo_name, issue_number_str, r)
+
     text = f'Issue {title} closed by {update.callback_query.from_user.full_name}'
     return None, text
 
@@ -230,9 +257,16 @@ def __join_to_message_text(title, repo_name, assigned, comment, flag='📂'):
 
 
 def __parse_text(text):
-    stext = text.split('\n')
-    if len(stext) == 3:
-        return stext[0].replace('🔘 ', ''), stext[1].replace('📂 ', '').replace('⚠️ ', ''), stext[2].replace('👤 ', ''), ''
+    st = text.split('\n')
+    if len(st) == 3:
+        return st[0].replace('🔘 ', ''), st[1].replace('📂 ', '').replace('⚠️ ', ''), st[2].replace('👤 ', ''), ''
     else:
-        comment = '\n'.join(stext[3:]).replace('ℹ️ ', '')
-        return stext[0].replace('🔘 ', ''), stext[1].replace('📂 ', '').replace('⚠️ ', ''), stext[2].replace('👤 ', ''), comment
+        comment = '\n'.join(st[3:]).replace('ℹ️ ', '')
+        return st[0].replace('🔘 ', ''), st[1].replace('📂 ', '').replace('⚠️ ', ''), st[2].replace('👤 ', ''), comment
+
+
+def __get_problem(clean_repo_name, issue_number_str, r):
+    text = f'Problem with ' \
+           f'{ans["link"].format(github.get_issue_human_link(clean_repo_name, issue_number_str), "issue")}:\n' \
+           f'{r["message"]}'
+    return text
