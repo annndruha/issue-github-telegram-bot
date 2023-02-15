@@ -1,8 +1,6 @@
 # Marakulin Andrey https://github.com/Annndruha
 # 2023
 
-import logging
-
 import requests
 
 
@@ -24,10 +22,6 @@ class Github:
         r = requests.post(self.issue_url.format(repo), headers=self.headers, json=payload)
         if 'Issues are disabled for this repo' in r.text:
             raise GithubIssueDisabledError
-        if r.status_code != 201:
-            logging.error('Open issue error:', r.text)
-            raise GithubApiError
-        logging.info('Open issue: {}'.format(r))
         return r
 
     def get_repos(self, page):
@@ -39,16 +33,16 @@ class Github:
         url = self.issue_url.format(repo) + '/' + number_str
         payload = {'state': 'closed', 'body': comment}
         r = requests.patch(url, headers=self.headers, json=payload)
-        if r.status_code != 200:
-            raise GithubApiError
-        logging.info('Close issue: {}'.format(r))
+        return r
 
     def get_issue(self, repo, number_str):
         url = self.issue_url.format(repo) + '/' + number_str
         r = requests.get(url, headers=self.headers)
-        if r.status_code != 200:
-            raise GithubApiError
-        return r.json()
+        return r.json(), r.status_code
+
+    def get_issue_human_link(self, repo, number_str):
+        url = self.issue_url.format(repo) + '/' + number_str
+        return url.replace('api.github.com/repos', 'github.com')
 
     def get_members(self, page):
         data = {'sort': 'full_name', 'per_page': 9, 'page': page}
@@ -59,13 +53,7 @@ class Github:
         url = self.issue_url.format(repo) + '/' + number_str
         payload = {'assignees': [member_login], 'body': comment}
         r = requests.patch(url, headers=self.headers, json=payload)
-        logging.info('Set assignee issue: {}'.format(r))
-        if r.status_code != 200:
-            raise GithubApiError
-
-
-class GithubApiError(Exception):
-    pass
+        return r
 
 
 class GithubIssueDisabledError(Exception):
