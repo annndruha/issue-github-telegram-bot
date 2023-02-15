@@ -109,7 +109,7 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
     mentions = update.effective_message.parse_entities(["mention"])
     if settings.BOT_NICKNAME.lower() not in [mention.lower() for mention in list(mentions.values())]:
         return
-    text = update.message.text.replace(settings.BOT_NICKNAME, '').strip()
+    text = update.message.text_html.replace(settings.BOT_NICKNAME, '').strip()
     if len(text) == 0:
         text = 'После упоминания требуется ввести название issue. Больше в /help'
         keyboard = None
@@ -166,9 +166,11 @@ def __keyboard_assign(page):
 
 async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     repo_name = str(update.callback_query.data.split('_')[1])
-    title, _, assigned, comment = __parse_text(update.callback_query.message.text)
+    title, _, assigned, _ = __parse_text(update.callback_query.message.text)
+    _, _, _, comment = __parse_text(update.callback_query.message.text_html)
 
-    github_comment = ans['issue_open'].format(update.callback_query.from_user.full_name) + comment
+    github_comment = ans['issue_open'].format(update.callback_query.from_user.full_name)
+    github_comment += comment.replace('<span class="tg-spoiler">', '').replace('</span>', '')
     try:
         r = github.open_issue(repo_name, title, github_comment)
     except GithubIssueDisabledError:
@@ -238,6 +240,9 @@ def __close_issue(update: Update):
     if r.status_code != 200:
         return None, __get_problem(clean_repo_name, issue_number_str, r)
 
+    logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
+                 f'[{update.callback_query.message.id}] Succeeded closed Issue:' +
+                 ans["link"].format(github.get_issue_human_link(clean_repo_name, issue_number_str), "issue"))
     text = f'Issue {title} closed by {update.callback_query.from_user.full_name}'
     return None, text
 
@@ -276,4 +281,5 @@ def __get_problem(clean_repo_name, issue_number_str, r):
     text = f'Problem with ' \
            f'{ans["link"].format(github.get_issue_human_link(clean_repo_name, issue_number_str), "issue")}:\n' \
            f'{r["message"]}'
+    logging.warning(github.get_issue_human_link(clean_repo_name, issue_number_str))
     return text
