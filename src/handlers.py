@@ -7,7 +7,7 @@ import traceback
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
-from telegram.error import TelegramError
+from telegram.error import TelegramError, NetworkError
 from telegram.ext import ContextTypes, CallbackContext
 
 from src.settings import get_settings
@@ -22,6 +22,9 @@ def handler(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await func(update, context)
+        except NetworkError as err:
+            logging.error(f'Exception {str(err.args)}.')
+            time.sleep(2)
         except (TelegramError, Exception) as err:
             logging.error(f'Exception {str(err.args)}, traceback:')
             traceback.print_tb(err.__traceback__)
@@ -181,16 +184,20 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         repo_link = response['repository_url'].replace('api.github.com/repos', 'github.com')
         repo_name = ans['link'].format(repo_link, repo_name)
         text = __join_to_message_text(title, repo_name, assigned, comment, '📂')
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
+                                          InlineKeyboardButton('👤', callback_data='assign_1'),
+                                          InlineKeyboardButton('❌', callback_data='close')]])
         logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                      f'[{update.callback_query.message.id}] Succeeded open Issue: {response["html_url"]}')
 
     else:
         await context.bot.answer_callback_query(update.callback_query.id, f'Response code: {r.status_code}')
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
         logging.error(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                       f'[{update.callback_query.message.id}] Failed to open Issue [{r.status_code}] {r.text}')
 
-    return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
+    return keyboard, text
 
 
 def __set_assign(update: Update):
