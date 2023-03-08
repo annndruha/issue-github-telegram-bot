@@ -53,7 +53,7 @@ jobs:
     environment:
       name: Production
     env:
-      CONTAINER_NAME: com_profcomff_issue_tgbot
+      CONTAINER_NAME: github_issue_telegram_bot
     permissions:
       packages: read
     steps:

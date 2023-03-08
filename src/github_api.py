@@ -25,7 +25,7 @@ class Github:
         return r
 
     def get_repos(self, page):
-        data = {'sort': 'full_name', 'per_page': 9, 'page': page}
+        data = {'sort': 'pushed', 'per_page': 9, 'page': page}
         r = requests.get(self.org_repos_url, headers=self.headers, params=data)
         return r.json()
 
@@ -34,6 +34,12 @@ class Github:
         payload = {'state': 'closed', 'body': comment}
         r = requests.patch(url, headers=self.headers, json=payload)
         return r
+
+    def reopen_issue(self, repo, number_str):
+        url = self.issue_url.format(repo) + '/' + number_str
+        payload = {'state': 'open'}
+        r = requests.patch(url, headers=self.headers, json=payload)
+        return r.json(), r.status_code
 
     def get_issue(self, repo, number_str):
         url = self.issue_url.format(repo) + '/' + number_str
