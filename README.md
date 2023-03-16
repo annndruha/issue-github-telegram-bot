@@ -1,4 +1,5 @@
-## Bot for creation GitHub issue from Telegram chat (only for organization repos)
+## Bot for creation GitHub issue from Telegram chat
+Only for Githib organizations (not for personal accounts)
 
 #### Setup
 
