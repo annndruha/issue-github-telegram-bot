@@ -193,6 +193,8 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                      f'[{update.callback_query.message.id}] Succeeded open Issue: {response["html_url"]}')
 
+        github.add_to_scrum(response['node_id'])
+
     else:
         await context.bot.answer_callback_query(update.callback_query.id, f'Response code: {r.status_code}')
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
