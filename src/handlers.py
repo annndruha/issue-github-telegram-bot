@@ -179,7 +179,7 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
         logging.warning(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                         f'[{update.callback_query.message.id}] Try to open issue, but issue for {repo_name} disabled')
-        return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), text
+        return InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]]), text
 
     if r.status_code == 201:
         response = r.json()
