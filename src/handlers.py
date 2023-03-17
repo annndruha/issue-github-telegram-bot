@@ -67,7 +67,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
         _, repo_name, _, _ = __parse_text(update.callback_query.message.text)
         if repo_name == 'No repo':
             keyboard = InlineKeyboardMarkup(
-                [[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]])
+                [[InlineKeyboardButton('⚠️ Выберите репозиторий', callback_data='repos_1')]])
         else:
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
 
@@ -170,7 +170,9 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     title, _, assigned, _ = __parse_text(update.callback_query.message.text)
     _, _, _, comment = __parse_text(update.callback_query.message.text_html)
 
-    github_comment = ans['issue_open'].format(update.callback_query.from_user.full_name)
+    link_to_msg = __get_link_to_telegram_message(update)
+
+    github_comment = ans['issue_open'].format(update.callback_query.from_user.full_name, link_to_msg)
     github_comment += comment.replace('<span class="tg-spoiler">', '').replace('</span>', '')
     try:
         r = github.open_issue(repo_name, title, github_comment)
@@ -305,3 +307,15 @@ def __get_problem(clean_repo_name, issue_number_str, r):
            f'{r["message"]}'
     logging.warning(github.get_issue_human_link(clean_repo_name, issue_number_str))
     return text
+
+
+def __get_link_to_telegram_message(update):
+    if update.callback_query.message.chat.type == "supergroup":
+        message_thread_id = update.callback_query.message.message_thread_id
+        message_thread_id = 1 if message_thread_id is None else message_thread_id  # If 'None' set '1'
+        chat_id = str(update.callback_query.message.chat_id)
+        message_id = update.callback_query.message.message_id
+        return f"""<a href="https://t.me/c/{chat_id[4:]}/{message_thread_id}/{message_id}">telegram message.</a>"""
+    else:
+        logging.warning(f"Chat {update.callback_query.message.chat_id} is not a supergroup, can't create a msg link.")
+        return 'telegram message.'
