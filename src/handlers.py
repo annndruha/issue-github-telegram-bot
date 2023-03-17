@@ -173,8 +173,8 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     link_to_msg = __get_link_to_telegram_message(update)
 
-    github_comment = ans['issue_open'].format(update.callback_query.from_user.full_name, link_to_msg)
-    github_comment += comment.replace('<span class="tg-spoiler">', '').replace('</span>', '')
+    github_comment = comment.replace('<span class="tg-spoiler">', '').replace('</span>', '')
+    github_comment += ans['issue_open'].format(update.callback_query.from_user.full_name, link_to_msg)
     try:
         r = github.open_issue(repo_name, title, github_comment)
     except GithubIssueDisabledError:
@@ -197,7 +197,6 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
                      f'[{update.callback_query.message.id}] Succeeded open Issue: {response["html_url"]}')
 
         threading.Thread(target=add_to_scrum, args=(github.headers, github.graphql_url, response['node_id'])).start()
-        # github.add_to_scrum(response['node_id'])
 
     else:
         await context.bot.answer_callback_query(update.callback_query.id, f'Response code: {r.status_code}')

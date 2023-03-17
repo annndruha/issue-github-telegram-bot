@@ -2,11 +2,11 @@
 # 2023
 
 ans = {
-    'issue_open': '<b>Issue open by {} via {}</a></b>\n\n',
+    'issue_open': '\n> Issue open by {} via {}</a>',
     'link': '''<a href="{}">{}</a>''',
     'member_to_login': '''<a href="https://github.com/{}">{}</a>''',
-    'assign_change': '\n\n**Assign changed from {} to {} by {}.**',
-    'issue_close': '\n\n**Issue closed by {}.**',
+    'assign_change': '\n> Assign changed from {} to {} by {}.',
+    'issue_close': '\n> Issue closed by {}.',
     'help': 'Чтобы создать issue, упомяните меня и после упоминания введите название issue.'
             '\nЕсли вы хотите указать описание, после названия issue сделайте перенос строки'
             ' и напишите описание. Пример сообщения для создания issue: \n\n'
