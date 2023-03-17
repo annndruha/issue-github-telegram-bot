@@ -53,7 +53,7 @@ jobs:
     environment:
       name: Production
     env:
-      CONTAINER_NAME: com_profcomff_tgbot_issue_github
+      CONTAINER_NAME: ${{ vars.DOCKER_CONTAINER_NAME }}
     permissions:
       packages: read
     steps:
