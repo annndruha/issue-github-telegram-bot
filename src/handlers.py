@@ -2,6 +2,8 @@
 # 2023
 
 import logging
+import threading
+import time
 import traceback
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -10,7 +12,7 @@ from telegram.constants import ParseMode
 from telegram.constants import MessageEntityType
 
 from src.settings import Settings
-from src.github_api import Github, GithubIssueDisabledError
+from src.github_api import Github, GithubIssueDisabledError, add_to_scrum
 from src.answers import ans
 
 settings = Settings()
@@ -195,7 +197,8 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                      f'[{update.callback_query.message.id}] Succeeded open Issue: {response["html_url"]}')
 
-        github.add_to_scrum(response['node_id'])
+        threading.Thread(target=add_to_scrum, args=(github.headers, github.graphql_url, response['node_id'])).start()
+        # github.add_to_scrum(response['node_id'])
 
     else:
         await context.bot.answer_callback_query(update.callback_query.id, f'Response code: {r.status_code}')
