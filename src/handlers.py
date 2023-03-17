@@ -109,9 +109,15 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
 @error_handler
 async def handler_message(update: Update, context: CallbackContext) -> None:
     mentions = update.effective_message.parse_entities(["mention"])
-    if settings.BOT_NICKNAME.lower() not in [mention.lower() for mention in list(mentions.values())]:
+    captions = update.effective_message.parse_caption_entities(["mention"])
+
+    if settings.BOT_NICKNAME.lower() in [mention.lower() for mention in list(mentions.values())]:
+        text = update.message.text_html.replace(settings.BOT_NICKNAME, '').strip()
+    elif settings.BOT_NICKNAME.lower() in [caption.lower() for caption in list(captions.values())]:
+        text = update.message.caption_html.replace(settings.BOT_NICKNAME, '').strip()
+    else:
         return
-    text = update.message.text_html.replace(settings.BOT_NICKNAME, '').strip()
+
     if len(text) == 0:
         text = 'После упоминания требуется ввести название issue. Больше в /help'
         keyboard = None
