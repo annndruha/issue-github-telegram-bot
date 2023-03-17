@@ -3,7 +3,6 @@
 
 import logging
 import threading
-import time
 import traceback
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
