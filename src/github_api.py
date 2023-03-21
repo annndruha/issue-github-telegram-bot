@@ -9,7 +9,6 @@ class Github:
     def __init__(self, organization_nickname, token):
         self.organization_nickname = organization_nickname
         self.issue_url = 'https://api.github.com/repos/' + organization_nickname + '/{}/issues'
-        self.graphql_url = 'https://api.github.com/graphql'
         self.org_repos_url = f'https://api.github.com/orgs/{organization_nickname}/repos'
         self.org_members_url = f'https://api.github.com/orgs/{organization_nickname}/members'
 
@@ -65,31 +64,35 @@ class Github:
         return r
 
 
-def add_to_scrum(headers, graphql_url, node_id):
+def add_to_scrum(headers, issue_id):
     try:
+        GRAPH_QL_URL = 'https://api.github.com/graphql'
         PROJECT_ID = 'PVT_kwDOBaPiZM4AFiz-'
-        add_item_to_scrum = {'query': 'mutation{ addProjectV2ItemById(input: {projectId: "%s" contentId: "%s"}) { '
-                                      'item { id } } }' % (PROJECT_ID, node_id)}
-        r = requests.post(url=graphql_url, json=add_item_to_scrum, headers=headers)
-
-        if 'errors' not in r.json():
-            logging.info(f'Node {node_id} successfully added to scrum Твой ФФ!')
-        else:
-            logging.warning(f'Node {node_id} not added to scrum. Reason: {r.json()["errors"]}')
-
         FIELD_ID = 'PVTSSF_lADOBaPiZM4AFiz-zgDMeOc'
         BACKLOG_OPTION_ID = '4a4a1bb5'
-        set_item_status_to_scrum = {'query': 'mutation {updateProjectV2ItemFieldValue(input: '
-                                             '{projectId: "%s", itemId: "%s", fieldId: '
-                                             '"%s",value: {singleSelectOptionId: "%s"}}) '
-                                             '{projectV2Item{id}}}' % (PROJECT_ID, node_id,
-                                                                       FIELD_ID, BACKLOG_OPTION_ID)}
 
-        r = requests.post(url=graphql_url, json=set_item_status_to_scrum, headers=headers)
-        if 'errors' not in r.json():
-            logging.info(f'Node {node_id} successfully set backlog status.')
-        else:
-            logging.warning(f'Node {node_id} not set status. Reason: {r.json()["errors"]}')
+        add_item_to_scrum = {'query': 'mutation{ addProjectV2ItemById(input: {projectId: "%s" contentId: "%s"}) { '
+                                      'item { id } } }' % (PROJECT_ID, issue_id)}
+        with requests.session() as session:
+            r = session.post(url=GRAPH_QL_URL, json=add_item_to_scrum, headers=headers)
+
+            if 'errors' in r.json():
+                logging.warning(f'Node {issue_id} not added to scrum. Reason: {r.json()["errors"]}')
+                return
+            logging.info(f'Node {issue_id} successfully added to scrum Твой ФФ!')
+
+            project_node_id = r.json()['data']['addProjectV2ItemById']['item']['id']
+            set_item_status_to_scrum = {'query': 'mutation {updateProjectV2ItemFieldValue(input: '
+                                                 '{projectId: "%s", itemId: "%s", fieldId: '
+                                                 '"%s",value: {singleSelectOptionId: "%s"}}) '
+                                                 '{projectV2Item{id}}}' % (PROJECT_ID, project_node_id,
+                                                                           FIELD_ID, BACKLOG_OPTION_ID)}
+
+            r = session.post(url=GRAPH_QL_URL, json=set_item_status_to_scrum, headers=headers)
+            if 'errors' in r.json():
+                logging.warning(f'Node {issue_id} not set status. Reason: {r.json()["errors"]}')
+            else:
+                logging.info(f'Node {issue_id} successfully set backlog status.')
     except Exception as err:
         logging.error(f'Scrum adding FAILED: {err.args}')
 

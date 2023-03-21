@@ -202,7 +202,7 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                      f'[{update.callback_query.message.id}] Succeeded open Issue: {response["html_url"]}')
 
-        threading.Thread(target=add_to_scrum, args=(github.headers, github.graphql_url, response['node_id'])).start()
+        threading.Thread(target=add_to_scrum, args=(github.headers, response['node_id'])).start()
 
     else:
         await context.bot.answer_callback_query(update.callback_query.id, f'Response code: {r.status_code}')
