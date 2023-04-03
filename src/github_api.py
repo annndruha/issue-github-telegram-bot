@@ -9,7 +9,6 @@ class Github:
     def __init__(self, organization_nickname, token):
         self.organization_nickname = organization_nickname
         self.issue_url = 'https://api.github.com/repos/' + organization_nickname + '/{}/issues'
-        self.graphql_url = 'https://api.github.com/graphql'
         self.org_repos_url = f'https://api.github.com/orgs/{organization_nickname}/repos'
         self.org_members_url = f'https://api.github.com/orgs/{organization_nickname}/members'
 
@@ -27,10 +26,64 @@ class Github:
             raise GithubIssueDisabledError
         return r
 
-    def get_repos(self, page):
-        data = {'sort': 'pushed', 'per_page': 9, 'page': page}
-        r = requests.get(self.org_repos_url, headers=self.headers, params=data)
-        return r.json()
+    def get_repos(self, cursor=None):
+        GRAPH_QL_URL = 'https://api.github.com/graphql'
+        # data = {'sort': 'pushed', 'per_page': 9, 'page': page}
+        # r = requests.get(self.org_repos_url, headers=self.headers, params=data)
+        # return r.json()
+        if cursor is None:
+            GET_REPOS = {'query': """{
+              repos: search(
+                query: "org:profcomff archived:false fork:true is:public sort:updated"
+                type: REPOSITORY
+                first: 9
+              ) {
+                repositoryCount
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                  hasPreviousPage
+                  startCursor
+                }
+                edges {
+                  node {
+                    ... on Repository {
+                      name
+                      url
+                    }
+                  }
+                }
+              }
+            }"""}
+        else:
+            first_or_last = 'first' if 'first' in cursor else 'last'
+            GET_REPOS = {'query': """{
+              repos: search(
+                query: "org:profcomff archived:false fork:true is:public sort:updated"
+                type: REPOSITORY
+                %s: 9
+                %s
+              ) {
+                repositoryCount
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                  hasPreviousPage
+                  startCursor
+                }
+                edges {
+                  node {
+                    ... on Repository {
+                      name
+                      url
+                    }
+                  }
+                }
+              }
+            }""" % (first_or_last, cursor)}
+        r = requests.post(url=GRAPH_QL_URL, json=GET_REPOS, headers=self.headers)
+        resp = r.json()
+        return resp['data']['repos']
 
     def close_issue(self, repo, number_str, comment=''):
         url = self.issue_url.format(repo) + '/' + number_str
@@ -64,33 +117,38 @@ class Github:
         r = requests.patch(url, headers=self.headers, json=payload)
         return r
 
-    def add_to_scrum(self, node_id):
-        try:
-            PROJECT_ID = 'PVT_kwDOBaPiZM4AFiz-'
-            add_item_to_scrum = {'query': 'mutation{ addProjectV2ItemById(input: {projectId: "%s" contentId: "%s"}) { '
-                                          'item { id } } }' % (PROJECT_ID, node_id)}
-            r = requests.post(url=self.graphql_url, json=add_item_to_scrum, headers=self.headers)
 
-            if 'errors' not in r.json():
-                logging.info(f'Node {node_id} successfully added to scrum Твой ФФ!')
-            else:
-                logging.warning(f'Node {node_id} not added to scrum. Reason: {r.json()["errors"]}')
+def add_to_scrum(headers, issue_id):
+    try:
+        GRAPH_QL_URL = 'https://api.github.com/graphql'
+        PROJECT_ID = 'PVT_kwDOBaPiZM4AFiz-'
+        FIELD_ID = 'PVTSSF_lADOBaPiZM4AFiz-zgDMeOc'
+        BACKLOG_OPTION_ID = '4a4a1bb5'
 
-            FIELD_ID = 'PVTSSF_lADOBaPiZM4AFiz-zgDMeOc'
-            BACKLOG_OPTION_ID = '4a4a1bb5'
+        add_item_to_scrum = {'query': 'mutation{ addProjectV2ItemById(input: {projectId: "%s" contentId: "%s"}) { '
+                                      'item { id } } }' % (PROJECT_ID, issue_id)}
+        with requests.session() as session:
+            r = session.post(url=GRAPH_QL_URL, json=add_item_to_scrum, headers=headers)
+
+            if 'errors' in r.json():
+                logging.warning(f'Node {issue_id} not added to scrum. Reason: {r.json()["errors"]}')
+                return
+            logging.info(f'Node {issue_id} successfully added to scrum Твой ФФ!')
+
+            project_node_id = r.json()['data']['addProjectV2ItemById']['item']['id']
             set_item_status_to_scrum = {'query': 'mutation {updateProjectV2ItemFieldValue(input: '
                                                  '{projectId: "%s", itemId: "%s", fieldId: '
                                                  '"%s",value: {singleSelectOptionId: "%s"}}) '
-                                                 '{projectV2Item{id}}}' % (PROJECT_ID, node_id,
+                                                 '{projectV2Item{id}}}' % (PROJECT_ID, project_node_id,
                                                                            FIELD_ID, BACKLOG_OPTION_ID)}
 
-            r = requests.post(url=self.graphql_url, json=set_item_status_to_scrum, headers=self.headers)
-            if 'errors' not in r.json():
-                logging.info(f'Node {node_id} successfully set backlog status.')
+            r = session.post(url=GRAPH_QL_URL, json=set_item_status_to_scrum, headers=headers)
+            if 'errors' in r.json():
+                logging.warning(f'Node {issue_id} not set status. Reason: {r.json()["errors"]}')
             else:
-                logging.warning(f'Node {node_id} not set status. Reason: {r.json()["errors"]}')
-        except Exception as err:
-            logging.error(f'Scrum adding FAILED: {err.args}')
+                logging.info(f'Node {issue_id} successfully set backlog status.')
+    except Exception as err:
+        logging.error(f'Scrum adding FAILED: {err.args}')
 
 
 class GithubIssueDisabledError(Exception):

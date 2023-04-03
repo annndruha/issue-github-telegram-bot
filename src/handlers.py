@@ -2,6 +2,7 @@
 # 2023
 
 import logging
+import threading
 import traceback
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -10,7 +11,7 @@ from telegram.constants import ParseMode
 from telegram.constants import MessageEntityType
 
 from src.settings import Settings
-from src.github_api import Github, GithubIssueDisabledError
+from src.github_api import Github, GithubIssueDisabledError, add_to_scrum
 from src.answers import ans
 
 settings = Settings()
@@ -67,7 +68,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
         _, repo_name, _, _ = __parse_text(update.callback_query.message.text)
         if repo_name == 'No repo':
             keyboard = InlineKeyboardMarkup(
-                [[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]])
+                [[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_start')]])
         else:
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
 
@@ -78,8 +79,8 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
         keyboard, text = __reopen_issue(update)
 
     elif callback_data.startswith('repos_'):
-        page = int(callback_data.split('_')[1])
-        keyboard = __keyboard_repos(page)
+        page_info = callback_data.split('_')[1]
+        keyboard = __keyboard_repos(page_info)
 
     elif callback_data.startswith('repo_'):
         keyboard, text = await __create_issue(update, context)
@@ -108,16 +109,22 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
 @error_handler
 async def handler_message(update: Update, context: CallbackContext) -> None:
     mentions = update.effective_message.parse_entities(["mention"])
-    if settings.BOT_NICKNAME.lower() not in [mention.lower() for mention in list(mentions.values())]:
+    captions = update.effective_message.parse_caption_entities(["mention"])
+
+    if settings.BOT_NICKNAME.lower() in [mention.lower() for mention in list(mentions.values())]:
+        text = update.message.text_html.replace(settings.BOT_NICKNAME, '').strip()
+    elif settings.BOT_NICKNAME.lower() in [caption.lower() for caption in list(captions.values())]:
+        text = update.message.caption_html.replace(settings.BOT_NICKNAME, '').strip()
+    else:
         return
-    text = update.message.text_html.replace(settings.BOT_NICKNAME, '').strip()
+
     if len(text) == 0:
         text = 'После упоминания требуется ввести название issue. Больше в /help'
         keyboard = None
         logging.warning(f'[{update.message.from_user.id} {update.message.from_user.full_name}] call with no title')
     else:
         text = __create_base_message_text(text)
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]])
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_start')]])
         logging.info(f'[{update.message.from_user.id} {update.message.from_user.full_name}]'
                      f' create draft with message:{repr(update.message.text)}')
 
@@ -129,20 +136,23 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
                                    parse_mode=ParseMode('HTML'))
 
 
-def __keyboard_repos(page):
-    repos = github.get_repos(page)
-    if len(repos) == 0:
-        page = 1
-        repos = github.get_repos(page)
-        if len(repos) == 0:
-            return InlineKeyboardMarkup([[InlineKeyboardButton('↩️ Выйти', callback_data='quite')]])
+def __keyboard_repos(cursor):
+    print(cursor)
+    if cursor == 'start':
+        repos_info = github.get_repos()
+    else:
+        repos_info = github.get_repos(cursor)
+    repos = repos_info['edges']
+    page_info = repos_info['pageInfo']
 
-    buttons = [[InlineKeyboardButton(repo['name'], callback_data='repo_' + repo['name'])] for repo in repos]
+    buttons = [[InlineKeyboardButton(repo['node']['name'], callback_data='repo_' + repo['node']['name'])] for repo in repos]
     buttons.append([])
-    if page > 1:
-        buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=f'repos_{page - 1}'))
+
+    if page_info['hasPreviousPage']:
+        buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=f'''repos_before: "{page_info['startCursor']}"'''))
     buttons[-1].append(InlineKeyboardButton('↩️ Выйти', callback_data='quite'))
-    buttons[-1].append(InlineKeyboardButton('➡️', callback_data=f'repos_{page + 1}'))
+    if page_info['hasNextPage']:
+        buttons[-1].append(InlineKeyboardButton('➡️', callback_data=f'''repos_after: "{page_info['endCursor']}"'''))
 
     return InlineKeyboardMarkup(buttons)
 
@@ -170,8 +180,10 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     title, _, assigned, _ = __parse_text(update.callback_query.message.text)
     _, _, _, comment = __parse_text(update.callback_query.message.text_html)
 
-    github_comment = ans['issue_open'].format(update.callback_query.from_user.full_name)
-    github_comment += comment.replace('<span class="tg-spoiler">', '').replace('</span>', '')
+    link_to_msg = __get_link_to_telegram_message(update)
+
+    github_comment = comment.replace('<span class="tg-spoiler">', '').replace('</span>', '')
+    github_comment += ans['issue_open'].format(update.callback_query.from_user.full_name, link_to_msg)
     try:
         r = github.open_issue(repo_name, title, github_comment)
     except GithubIssueDisabledError:
@@ -179,7 +191,7 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
         logging.warning(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                         f'[{update.callback_query.message.id}] Try to open issue, but issue for {repo_name} disabled')
-        return InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]]), text
+        return InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_start')]]), text
 
     if r.status_code == 201:
         response = r.json()
@@ -193,7 +205,7 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                      f'[{update.callback_query.message.id}] Succeeded open Issue: {response["html_url"]}')
 
-        github.add_to_scrum(response['node_id'])
+        threading.Thread(target=add_to_scrum, args=(github.headers, response['node_id'])).start()
 
     else:
         await context.bot.answer_callback_query(update.callback_query.id, f'Response code: {r.status_code}')
@@ -305,3 +317,15 @@ def __get_problem(clean_repo_name, issue_number_str, r):
            f'{r["message"]}'
     logging.warning(github.get_issue_human_link(clean_repo_name, issue_number_str))
     return text
+
+
+def __get_link_to_telegram_message(update):
+    if update.callback_query.message.chat.type == "supergroup":
+        message_thread_id = update.callback_query.message.message_thread_id
+        message_thread_id = 1 if message_thread_id is None else message_thread_id  # If 'None' set '1'
+        chat_id = str(update.callback_query.message.chat_id)
+        message_id = update.callback_query.message.message_id
+        return f"""<a href="https://t.me/c/{chat_id[4:]}/{message_thread_id}/{message_id}">telegram message.</a>"""
+    else:
+        logging.warning(f"Chat {update.callback_query.message.chat_id} is not a supergroup, can't create a msg link.")
+        return 'telegram message.'
