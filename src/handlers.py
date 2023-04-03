@@ -68,7 +68,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
         _, repo_name, _, _ = __parse_text(update.callback_query.message.text)
         if repo_name == 'No repo':
             keyboard = InlineKeyboardMarkup(
-                [[InlineKeyboardButton('⚠️ Выберите репозиторий', callback_data='repos_1')]])
+                [[InlineKeyboardButton('⚠️ Выберите репозиторий', callback_data='repos_start')]])
         else:
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
 
@@ -79,8 +79,8 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
         keyboard, text = __reopen_issue(update)
 
     elif callback_data.startswith('repos_'):
-        page = int(callback_data.split('_')[1])
-        keyboard = __keyboard_repos(page)
+        page_info = callback_data.split('_')[1]
+        keyboard = __keyboard_repos(page_info)
 
     elif callback_data.startswith('repo_'):
         keyboard, text = await __create_issue(update, context)
@@ -124,7 +124,7 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
         logging.warning(f'[{update.message.from_user.id} {update.message.from_user.full_name}] call with no title')
     else:
         text = __create_base_message_text(text)
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]])
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_start')]])
         logging.info(f'[{update.message.from_user.id} {update.message.from_user.full_name}]'
                      f' create draft with message:{repr(update.message.text)}')
 
@@ -137,15 +137,13 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
 
 
 def __keyboard_repos(cursor):
-    repos_info = github.get_repos()
+    print(cursor)
+    if cursor == 'start':
+        repos_info = github.get_repos()
+    else:
+        repos_info = github.get_repos(cursor)
     repos = repos_info['edges']
     page_info = repos_info['pageInfo']
-
-    # if len(repos) == 0:
-    #     page = 1
-    #     repos = github.get_repos(page)
-    #     if len(repos) == 0:
-    #         return InlineKeyboardMarkup([[InlineKeyboardButton('↩️ Выйти', callback_data='quite')]])
 
     buttons = [[InlineKeyboardButton(repo['node']['name'], callback_data='repo_' + repo['node']['name'])] for repo in repos]
     buttons.append([])
@@ -193,7 +191,7 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = __join_to_message_text(title, 'No repo', assigned, comment, '⚠️')
         logging.warning(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                         f'[{update.callback_query.message.id}] Try to open issue, but issue for {repo_name} disabled')
-        return InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_1')]]), text
+        return InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_start')]]), text
 
     if r.status_code == 201:
         response = r.json()
