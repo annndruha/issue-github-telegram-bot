@@ -136,20 +136,25 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
                                    parse_mode=ParseMode('HTML'))
 
 
-def __keyboard_repos(page):
-    repos = github.get_repos(page)
-    if len(repos) == 0:
-        page = 1
-        repos = github.get_repos(page)
-        if len(repos) == 0:
-            return InlineKeyboardMarkup([[InlineKeyboardButton('↩️ Выйти', callback_data='quite')]])
+def __keyboard_repos(cursor):
+    repos_info = github.get_repos()
+    repos = repos_info['edges']
+    page_info = repos_info['pageInfo']
 
-    buttons = [[InlineKeyboardButton(repo['name'], callback_data='repo_' + repo['name'])] for repo in repos]
+    # if len(repos) == 0:
+    #     page = 1
+    #     repos = github.get_repos(page)
+    #     if len(repos) == 0:
+    #         return InlineKeyboardMarkup([[InlineKeyboardButton('↩️ Выйти', callback_data='quite')]])
+
+    buttons = [[InlineKeyboardButton(repo['node']['name'], callback_data='repo_' + repo['node']['name'])] for repo in repos]
     buttons.append([])
-    if page > 1:
-        buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=f'repos_{page - 1}'))
+
+    if page_info['hasPreviousPage']:
+        buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=f'''repos_before: "{page_info['startCursor']}"'''))
     buttons[-1].append(InlineKeyboardButton('↩️ Выйти', callback_data='quite'))
-    buttons[-1].append(InlineKeyboardButton('➡️', callback_data=f'repos_{page + 1}'))
+    if page_info['hasNextPage']:
+        buttons[-1].append(InlineKeyboardButton('➡️', callback_data=f'''repos_after: "{page_info['endCursor']}"'''))
 
     return InlineKeyboardMarkup(buttons)
 
