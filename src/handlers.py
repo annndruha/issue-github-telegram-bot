@@ -68,7 +68,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
         _, repo_name, _, _ = __parse_text(update.callback_query.message.text)
         if repo_name == 'No repo':
             keyboard = InlineKeyboardMarkup(
-                [[InlineKeyboardButton('⚠️ Выберите репозиторий', callback_data='repos_start')]])
+                [[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_start')]])
         else:
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
 
