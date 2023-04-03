@@ -34,7 +34,7 @@ class Github:
         if cursor is None:
             GET_REPOS = {'query': """{
               repos: search(
-                query: "org:profcomff archived:false fork:true is:public sort:updated"
+                query: "org:%s archived:false fork:true is:public sort:updated"
                 type: REPOSITORY
                 first: 9
               ) {
@@ -54,12 +54,12 @@ class Github:
                   }
                 }
               }
-            }"""}
+            }""" % self.organization_nickname}
         else:
             first_or_last = 'first' if 'first' in cursor else 'last'
             GET_REPOS = {'query': """{
               repos: search(
-                query: "org:profcomff archived:false fork:true is:public sort:updated"
+                query: "org:%s archived:false fork:true is:public sort:updated"
                 type: REPOSITORY
                 %s: 9
                 %s
@@ -80,7 +80,7 @@ class Github:
                   }
                 }
               }
-            }""" % (first_or_last, cursor)}
+            }""" % (self.organization_nickname, first_or_last, cursor)}
         r = requests.post(url=GRAPH_QL_URL, json=GET_REPOS, headers=self.headers)
         resp = r.json()
         return resp['data']['repos']
