@@ -26,10 +26,64 @@ class Github:
             raise GithubIssueDisabledError
         return r
 
-    def get_repos(self, page):
-        data = {'sort': 'pushed', 'per_page': 9, 'page': page}
-        r = requests.get(self.org_repos_url, headers=self.headers, params=data)
-        return r.json()
+    def get_repos(self, cursor=None):
+        GRAPH_QL_URL = 'https://api.github.com/graphql'
+        # data = {'sort': 'pushed', 'per_page': 9, 'page': page}
+        # r = requests.get(self.org_repos_url, headers=self.headers, params=data)
+        # return r.json()
+        if cursor is None:
+            GET_REPOS = {'query': """{
+              repos: search(
+                query: "org:profcomff archived:false fork:true is:public sort:updated"
+                type: REPOSITORY
+                first: 9
+              ) {
+                repositoryCount
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                  hasPreviousPage
+                  startCursor
+                }
+                edges {
+                  node {
+                    ... on Repository {
+                      name
+                      url
+                    }
+                  }
+                }
+              }
+            }"""}
+        else:
+            first_or_last = 'first' if 'first' in cursor else 'last'
+            GET_REPOS = {'query': """{
+              repos: search(
+                query: "org:profcomff archived:false fork:true is:public sort:updated"
+                type: REPOSITORY
+                %s: 9
+                %s
+              ) {
+                repositoryCount
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                  hasPreviousPage
+                  startCursor
+                }
+                edges {
+                  node {
+                    ... on Repository {
+                      name
+                      url
+                    }
+                  }
+                }
+              }
+            }""" % (first_or_last, cursor)}
+        r = requests.post(url=GRAPH_QL_URL, json=GET_REPOS, headers=self.headers)
+        resp = r.json()
+        return resp['data']['repos']
 
     def close_issue(self, repo, number_str, comment=''):
         url = self.issue_url.format(repo) + '/' + number_str
