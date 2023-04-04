@@ -12,6 +12,8 @@ class Github:
         self.org_repos_url = f'https://api.github.com/orgs/{organization_nickname}/repos'
         self.org_members_url = f'https://api.github.com/orgs/{organization_nickname}/members'
 
+        self.session = requests.Session()
+
         self.headers = {
             'Accept': 'application/vnd.github+json',
             'Authorization': f'Bearer {token}',
@@ -21,10 +23,15 @@ class Github:
 
     def open_issue(self, repo, title, comment):
         payload = {'title': title, 'body': comment, 'projects': f'{self.organization_nickname}/7'}
-        r = requests.post(self.issue_url.format(repo), headers=self.headers, json=payload)
+        r = self.session.post(self.issue_url.format(repo), headers=self.headers, json=payload)
         if 'Issues are disabled for this repo' in r.text:
             raise GithubIssueDisabledError
         return r
+
+    def old_get_repos(self, page=1):
+        data = {'sort': 'pushed', 'per_page': 9, 'page': page}
+        r = self.session.get(self.org_repos_url, headers=self.headers, params=data)
+        return r.json()
 
     def get_repos(self, cursor=None):
         GRAPH_QL_URL = 'https://api.github.com/graphql'
@@ -81,36 +88,36 @@ class Github:
                 }
               }
             }""" % (first_or_last, cursor)}
-        r = requests.post(url=GRAPH_QL_URL, json=GET_REPOS, headers=self.headers)
+        r = self.session.post(url=GRAPH_QL_URL, json=GET_REPOS, headers=self.headers)
         resp = r.json()
         return resp['data']['repos']
 
     def close_issue(self, issue_url, comment=''):
         url = issue_url.replace('https://github.com', 'https://api.github.com/repos')
         payload = {'state': 'closed', 'body': comment}
-        r = requests.patch(url, headers=self.headers, json=payload)
+        r = self.session.patch(url, headers=self.headers, json=payload)
         return r
 
     def reopen_issue(self, issue_url, comment=''):
         url = issue_url.replace('https://github.com', 'https://api.github.com/repos')
         payload = {'state': 'open', 'body': comment}
-        r = requests.patch(url, headers=self.headers, json=payload)
+        r = self.session.patch(url, headers=self.headers, json=payload)
         return r.json(), r.status_code
 
     def get_issue(self, issue_url):
         url = issue_url.replace('https://github.com', 'https://api.github.com/repos')
-        r = requests.get(url, headers=self.headers)
+        r = self.session.get(url, headers=self.headers)
         return r.json(), r.status_code
 
     def get_members(self, page):
         data = {'sort': 'full_name', 'per_page': 9, 'page': page}
-        r = requests.get(self.org_members_url, headers=self.headers, params=data)
+        r = self.session.get(self.org_members_url, headers=self.headers, params=data)
         return r.json()
 
     def set_assignee(self, issue_url, member_login, comment):
         url = issue_url.replace('https://github.com', 'https://api.github.com/repos')
         payload = {'assignees': [member_login], 'body': comment}
-        r = requests.patch(url, headers=self.headers, json=payload)
+        r = self.session.patch(url, headers=self.headers, json=payload)
         return r
 
 

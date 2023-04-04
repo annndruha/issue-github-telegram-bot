@@ -54,6 +54,21 @@ async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @error_handler
+async def handler_md_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(chat_id=update.message.chat_id,
+                                   message_thread_id=update.message.message_thread_id,
+                                   text=ans['markdown_guide_tg'],
+                                   disable_web_page_preview=True,
+                                   parse_mode=ParseMode('HTML'))
+    await context.bot.send_message(chat_id=update.message.chat_id,
+                                   message_thread_id=update.message.message_thread_id,
+                                   text=ans['markdown_guide_md'],
+                                   disable_web_page_preview=True,
+                                   )
+    logging.info(f'[{update.message.from_user.id} {update.message.from_user.full_name}] call /md_guide')
+
+
+@error_handler
 async def handler_button(update: Update, context: CallbackContext) -> None:
     logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}]'
                  f'[{update.callback_query.message.id}] button pressed with callback_data={update.callback_query.data}')

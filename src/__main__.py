@@ -7,7 +7,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 from telegram.ext import filters
 
 from src.settings import Settings
-from src.handlers import handler_start, handler_help, handler_button, handler_message, native_error_handler
+from src.handlers import handler_start, handler_help, handler_md_guide,\
+    handler_button, handler_message, native_error_handler
 
 tg_log_handler = logging.FileHandler("issue_tgbot_telegram_updater.log")
 tg_log_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -27,6 +28,7 @@ if __name__ == '__main__':
     application = ApplicationBuilder().token(settings.BOT_TOKEN).build()
     application.add_handler(CommandHandler('start', handler_start))
     application.add_handler(CommandHandler('help', handler_help))
+    application.add_handler(CommandHandler('md_guide', handler_md_guide))
     application.add_handler(CallbackQueryHandler(handler_button))
     application.add_handler(MessageHandler(filters.Entity("mention"), handler_message))
     application.add_handler(MessageHandler(filters.ATTACHMENT, handler_message))

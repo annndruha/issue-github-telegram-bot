@@ -12,6 +12,17 @@ def extract_href(raw_text):
     return None, raw_text
 
 
+def replacements(text):
+    for _ in range(4):
+        text = text.replace('<span class="tg-spoiler">', '').replace('</span>', '')
+        text = text.replace('&quot;', '"').replace("&#x27;", "'")
+        text = text.replace('\n</b>', '</b>\n').replace('\n</i>', '</i>\n').replace('\n</u>', '</u>\n')
+        text = text.replace('\n</s>', '</s>\n').replace('\n</code>', '</code>\n').replace('\n</a>', '</a>\n')
+        text = text.replace('\n</pre>', '</pre>\n')
+        text = text.replace('<pre>', '```').replace('</pre>', '\n```')
+    return text
+
+
 class TgIssueMessage:
     def __init__(self, text_html, from_user=False, from_reopen=False):
         self.issue_title = None
@@ -32,7 +43,7 @@ class TgIssueMessage:
             self.__parse_bot_text(text_html)
 
     def __parse_text(self, text):
-        text = text.replace('<span class="tg-spoiler">', '').replace('</span>', '')
+        text = replacements(text)
         if len(text.split('\n')) == 1:
             self.issue_title = text
             self.comment = ''
@@ -45,12 +56,13 @@ class TgIssueMessage:
         self.set_issue_url(self.issue_url)
 
     def __parse_bot_text(self, text):
+        text = replacements(text)
         st = text.split('\n')
         self.issue_url, self.issue_title = extract_href(st[0].replace('🏷 ', ''))
         self.repo_url, self.repo_name = extract_href(st[1].replace('🗄 ', '').replace('⚠️ ', ''))
         self.assigned_url, self.assigned = extract_href(st[2].replace('👤 ', ''))
         if len(st) > 3:
-            self.comment = '\n'.join(st[3:]).replace('📜 ', '')
+            self.comment = '\n'.join(st[3:])
 
     def is_created(self):
         return bool(self.issue_url)
@@ -90,6 +102,6 @@ class TgIssueMessage:
             text += '\n👤 No assigned'
 
         if self.comment:
-            text += f'\n📜 {self.comment}'
+            text += f'\n{self.comment}'
 
         return text
