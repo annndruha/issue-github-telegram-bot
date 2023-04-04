@@ -1,0 +1,23 @@
+{
+  repos: search(
+    query: "org:profcomff archived:false fork:true is:public sort:updated"
+    type: REPOSITORY
+    first: 9
+  ) {
+    repositoryCount
+    pageInfo {
+      hasNextPage
+      endCursor
+      hasPreviousPage
+      startCursor
+    }
+    edges {
+      node {
+        ... on Repository {
+          name
+          url
+        }
+      }
+    }
+  }
+}
