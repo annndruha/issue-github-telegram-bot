@@ -85,34 +85,30 @@ class Github:
         resp = r.json()
         return resp['data']['repos']
 
-    def close_issue(self, repo, number_str, comment=''):
-        url = self.issue_url.format(repo) + '/' + number_str
+    def close_issue(self, issue_url, comment=''):
+        url = issue_url.replace('https://github.com', 'https://api.github.com/repos')
         payload = {'state': 'closed', 'body': comment}
         r = requests.patch(url, headers=self.headers, json=payload)
         return r
 
-    def reopen_issue(self, repo, number_str):
-        url = self.issue_url.format(repo) + '/' + number_str
-        payload = {'state': 'open'}
+    def reopen_issue(self, issue_url, comment=''):
+        url = issue_url.replace('https://github.com', 'https://api.github.com/repos')
+        payload = {'state': 'open', 'body': comment}
         r = requests.patch(url, headers=self.headers, json=payload)
         return r.json(), r.status_code
 
-    def get_issue(self, repo, number_str):
-        url = self.issue_url.format(repo) + '/' + number_str
+    def get_issue(self, issue_url):
+        url = issue_url.replace('https://github.com', 'https://api.github.com/repos')
         r = requests.get(url, headers=self.headers)
         return r.json(), r.status_code
-
-    def get_issue_human_link(self, repo, number_str):
-        url = self.issue_url.format(repo) + '/' + number_str
-        return url.replace('api.github.com/repos', 'github.com')
 
     def get_members(self, page):
         data = {'sort': 'full_name', 'per_page': 9, 'page': page}
         r = requests.get(self.org_members_url, headers=self.headers, params=data)
         return r.json()
 
-    def set_assignee(self, repo, number_str, member_login, comment):
-        url = self.issue_url.format(repo) + '/' + number_str
+    def set_assignee(self, issue_url, member_login, comment):
+        url = issue_url.replace('https://github.com', 'https://api.github.com/repos')
         payload = {'assignees': [member_login], 'body': comment}
         r = requests.patch(url, headers=self.headers, json=payload)
         return r
