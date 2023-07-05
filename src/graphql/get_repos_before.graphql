@@ -1,4 +1,4 @@
-query getContinentName ($ghquery: String!, $cursor: String!) {
+query getReposBefore ($ghquery: String!, $cursor: String!) {
     repos: search(
         query: $ghquery
         type: REPOSITORY

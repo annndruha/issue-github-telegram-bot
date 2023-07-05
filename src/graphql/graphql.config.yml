@@ -1,3 +1,5 @@
+# This file used by PyCharm GraphQL plugin
+# https://github.com/JetBrains/js-graphql-intellij-plugin
 schema: schema.github.graphql
 extensions:
   endpoints:

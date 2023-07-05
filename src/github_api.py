@@ -44,7 +44,6 @@ class Github:
         with open('src/graphql/get_repos_before.graphql') as f:
             self.q_get_repos_before = gql(f.read())
 
-
     def open_issue(self, repo, title, comment):
         payload = {'title': title, 'body': comment, 'projects': f'{self.organization_nickname}/7'}
         r = self.session.post(self.issue_url.format(repo), headers=self.headers, json=payload)
