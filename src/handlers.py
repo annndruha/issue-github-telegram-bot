@@ -11,7 +11,7 @@ from telegram.constants import ParseMode
 
 from src.settings import Settings
 from src.issue_message import TgIssueMessage
-from src.github_api import Github, GithubIssueDisabledError, add_to_scrum
+from src.github_api import Github, GithubIssueDisabledError
 from src.answers import ans
 
 settings = Settings()
@@ -215,7 +215,7 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                           InlineKeyboardButton('👤', callback_data='assign_1'),
                                           InlineKeyboardButton('❌', callback_data='close')]])
         logging.info(f'{str_sender_info(update)} Succeeded open Issue: {response["html_url"]}')
-        threading.Thread(target=add_to_scrum, args=(github.headers, response['node_id'])).start()
+        threading.Thread(target=github.add_to_scrum, args=(response['node_id'], )).start()
 
     else:
         await context.bot.answer_callback_query(update.callback_query.id, f'Response code: {r.status_code}')
