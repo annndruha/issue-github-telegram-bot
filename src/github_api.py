@@ -37,12 +37,8 @@ class Github:
         self.__read_queries()
 
     def __read_queries(self):
-        with open('src/graphql/get_repos_init.graphql') as f:
-            self.q_get_repos_init = gql(f.read())
-        with open('src/graphql/get_repos_after.graphql') as f:
-            self.q_get_repos_after = gql(f.read())
-        with open('src/graphql/get_repos_before.graphql') as f:
-            self.q_get_repos_before = gql(f.read())
+        with open('src/graphql/get_repos.graphql') as f:
+            self.q_get_repos = gql(f.read())
 
     def open_issue(self, repo, title, comment):
         payload = {'title': title, 'body': comment, 'projects': f'{self.organization_nickname}/7'}
@@ -59,13 +55,14 @@ class Github:
     def get_repos(self, page_info):
         params = {'ghquery': f"org:{self.organization_nickname} archived:false fork:true is:public sort:updated"}
         if page_info == 'repos_start':
-            return self.client.execute(self.q_get_repos_init, variable_values=params)['repos']
+            r = self.client.execute(self.q_get_repos, operation_name='getReposInit', variable_values=params)
         elif page_info.startswith('repos_after'):
             params['cursor'] = page_info.split('_')[2]
-            return self.client.execute(self.q_get_repos_after, variable_values=params)['repos']
+            r = self.client.execute(self.q_get_repos, operation_name='getReposAfter', variable_values=params)
         elif page_info.startswith('repos_before'):
             params['cursor'] = page_info.split('_')[2]
-            return self.client.execute(self.q_get_repos_before, variable_values=params)['repos']
+            r = self.client.execute(self.q_get_repos, operation_name='getReposBefore', variable_values=params)
+        return r['repos']
 
     def close_issue(self, issue_url, comment=''):
         url = issue_url.replace('https://github.com', 'https://api.github.com/repos')

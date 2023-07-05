@@ -1,0 +1,73 @@
+query getReposInit ($ghquery: String!) {
+  repos: search(
+    query: $ghquery
+    type: REPOSITORY
+    first: 9
+  ) {
+    repositoryCount
+    pageInfo {
+      hasNextPage
+      endCursor
+      hasPreviousPage
+      startCursor
+    }
+    edges {
+      node {
+        ... on Repository {
+          name
+          url
+        }
+      }
+    }
+  }
+}
+
+query getReposAfter ($ghquery: String!, $cursor: String!) {
+    repos: search(
+        query: $ghquery
+        type: REPOSITORY
+        first: 9
+        after: $cursor
+    ) {
+        repositoryCount
+        pageInfo {
+            hasNextPage
+            endCursor
+            hasPreviousPage
+            startCursor
+        }
+        edges {
+            node {
+                ... on Repository {
+                    name
+                    url
+                }
+            }
+        }
+    }
+}
+
+query getReposBefore ($ghquery: String!, $cursor: String!) {
+    repos: search(
+        query: $ghquery
+        type: REPOSITORY
+        last: 9
+        before: $cursor
+    ) {
+        repositoryCount
+        pageInfo {
+            hasNextPage
+            endCursor
+            hasPreviousPage
+            startCursor
+        }
+        edges {
+            node {
+                ... on Repository {
+                    name
+                    url
+                }
+            }
+        }
+    }
+}
