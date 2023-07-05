@@ -3,6 +3,8 @@
 import logging
 
 import requests
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
 
 
 class Github:
@@ -21,6 +23,28 @@ class Github:
             'Content-Type': 'application/x-www-form-urlencoded'
         }
 
+        self.transport = RequestsHTTPTransport(
+            url="https://api.github.com/graphql",
+            verify=True,
+            retries=3,
+            headers=self.headers
+        )
+
+        with open('src/graphql/schema.github.graphql') as f:
+            schema_str = f.read()
+
+        self.client = Client(transport=self.transport, schema=schema_str)
+        self.__read_queries()
+
+    def __read_queries(self):
+        with open('src/graphql/get_repos_init.graphql') as f:
+            self.q_get_repos_init = gql(f.read())
+        with open('src/graphql/get_repos_after.graphql') as f:
+            self.q_get_repos_after = gql(f.read())
+        with open('src/graphql/get_repos_before.graphql') as f:
+            self.q_get_repos_before = gql(f.read())
+
+
     def open_issue(self, repo, title, comment):
         payload = {'title': title, 'body': comment, 'projects': f'{self.organization_nickname}/7'}
         r = self.session.post(self.issue_url.format(repo), headers=self.headers, json=payload)
@@ -33,64 +57,16 @@ class Github:
         r = self.session.get(self.org_repos_url, headers=self.headers, params=data)
         return r.json()
 
-    def get_repos(self, cursor=None):
-        GRAPH_QL_URL = 'https://api.github.com/graphql'
-        # data = {'sort': 'pushed', 'per_page': 9, 'page': page}
-        # r = requests.get(self.org_repos_url, headers=self.headers, params=data)
-        # return r.json()
-        if cursor is None:
-            GET_REPOS = {'query': """{
-              repos: search(
-                query: "org:profcomff archived:false fork:true is:public sort:updated"
-                type: REPOSITORY
-                first: 9
-              ) {
-                repositoryCount
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                  hasPreviousPage
-                  startCursor
-                }
-                edges {
-                  node {
-                    ... on Repository {
-                      name
-                      url
-                    }
-                  }
-                }
-              }
-            }"""}
-        else:
-            first_or_last = 'first' if 'first' in cursor else 'last'
-            GET_REPOS = {'query': """{
-              repos: search(
-                query: "org:profcomff archived:false fork:true is:public sort:updated"
-                type: REPOSITORY
-                %s: 9
-                %s
-              ) {
-                repositoryCount
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                  hasPreviousPage
-                  startCursor
-                }
-                edges {
-                  node {
-                    ... on Repository {
-                      name
-                      url
-                    }
-                  }
-                }
-              }
-            }""" % (first_or_last, cursor)}
-        r = self.session.post(url=GRAPH_QL_URL, json=GET_REPOS, headers=self.headers)
-        resp = r.json()
-        return resp['data']['repos']
+    def get_repos(self, page_info):
+        params = {'ghquery': f"org:{self.organization_nickname} archived:false fork:true is:public sort:updated"}
+        if page_info == 'repos_start':
+            return self.client.execute(self.q_get_repos_init, variable_values=params)['repos']
+        elif page_info.startswith('repos_after'):
+            params['cursor'] = page_info.split('_')[2]
+            return self.client.execute(self.q_get_repos_after, variable_values=params)['repos']
+        elif page_info.startswith('repos_before'):
+            params['cursor'] = page_info.split('_')[2]
+            return self.client.execute(self.q_get_repos_before, variable_values=params)['repos']
 
     def close_issue(self, issue_url, comment=''):
         url = issue_url.replace('https://github.com', 'https://api.github.com/repos')

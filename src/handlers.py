@@ -101,8 +101,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
         keyboard, text = __reopen_issue(update)
 
     elif callback_data.startswith('repos_'):
-        page_info = callback_data.split('_')[1]
-        keyboard = __keyboard_repos(page_info)
+        keyboard = __keyboard_repos(callback_data)
 
     elif callback_data.startswith('repo_'):
         keyboard, text = await __create_issue(update, context)
@@ -154,11 +153,8 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
                                    parse_mode=ParseMode('HTML'))
 
 
-def __keyboard_repos(cursor):
-    if cursor == 'start':
-        repos_info = github.get_repos()
-    else:
-        repos_info = github.get_repos(cursor)
+def __keyboard_repos(page_info):
+    repos_info = github.get_repos(page_info)
 
     buttons = []
     for repo in repos_info['edges']:
@@ -166,13 +162,13 @@ def __keyboard_repos(cursor):
 
     buttons.append([])
     if repos_info['pageInfo']['hasPreviousPage']:
-        cb_data = f'''repos_before: "{repos_info['pageInfo']['startCursor']}"'''
+        cb_data = f'''repos_before_{repos_info['pageInfo']['startCursor']}'''
         buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=cb_data))
 
     buttons[-1].append(InlineKeyboardButton('↩️ Выйти', callback_data='quite'))
 
     if repos_info['pageInfo']['hasNextPage']:
-        cb_data = f'''repos_after: "{repos_info['pageInfo']['endCursor']}"'''
+        cb_data = f'''repos_after_{repos_info['pageInfo']['endCursor']}'''
         buttons[-1].append(InlineKeyboardButton('➡️', callback_data=cb_data))
 
     return InlineKeyboardMarkup(buttons)

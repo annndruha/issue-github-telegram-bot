@@ -1,6 +1,6 @@
-{
+query getContinentName ($ghquery: String!) {
   repos: search(
-    query: "org:profcomff archived:false fork:true is:public sort:updated"
+    query: $ghquery
     type: REPOSITORY
     first: 9
   ) {

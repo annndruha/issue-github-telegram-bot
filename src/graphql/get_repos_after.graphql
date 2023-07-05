@@ -1,0 +1,24 @@
+query getContinentName ($ghquery: String!, $cursor: String!) {
+    repos: search(
+        query: $ghquery
+        type: REPOSITORY
+        first: 9
+        after: $cursor
+    ) {
+        repositoryCount
+        pageInfo {
+            hasNextPage
+            endCursor
+            hasPreviousPage
+            startCursor
+        }
+        edges {
+            node {
+                ... on Repository {
+                    name
+                    url
+                }
+            }
+        }
+    }
+}

@@ -1,4 +1,6 @@
 python-telegram-bot
 requests
+gql[all]
+aiohttp
 pydantic
 pydantic[dotenv]
