@@ -1,26 +1,8 @@
+# Marakulin Andrey https://github.com/Annndruha
+# 2023
+# This class used for parsing telegram message ann reformat for markdown
 import re
 import logging
-
-
-def extract_href(raw_text):
-    match = re.search(r'href=[\'"]?([^\'" >]+)', raw_text)
-    if match:
-        url = match.group(1)
-        match = re.search(r'>(.*?)</a>', raw_text)
-        text = match.group(1) if match else None
-        return url, text
-    return None, raw_text
-
-
-def replacements(text):
-    for _ in range(4):
-        text = text.replace('<span class="tg-spoiler">', '').replace('</span>', '')
-        text = text.replace('&quot;', '"').replace("&#x27;", "'")
-        text = text.replace('\n</b>', '</b>\n').replace('\n</i>', '</i>\n').replace('\n</u>', '</u>\n')
-        text = text.replace('\n</s>', '</s>\n').replace('\n</code>', '</code>\n').replace('\n</a>', '</a>\n')
-        text = text.replace('\n</pre>', '</pre>\n')
-        text = text.replace('<pre>', '```').replace('</pre>', '\n```')
-    return text
 
 
 class TgIssueMessage:
@@ -42,8 +24,29 @@ class TgIssueMessage:
         else:
             self.__parse_bot_text(text_html)
 
+    @staticmethod
+    def extract_href(raw_text):
+        match = re.search(r'href=[\'"]?([^\'" >]+)', raw_text)
+        if match:
+            url = match.group(1)
+            match = re.search(r'>(.*?)</a>', raw_text)
+            text = match.group(1) if match else None
+            return url, text
+        return None, raw_text
+
+    @staticmethod
+    def replacements(text):
+        for _ in range(4):
+            text = text.replace('<span class="tg-spoiler">', '').replace('</span>', '')
+            text = text.replace('&quot;', '"').replace("&#x27;", "'")
+            text = text.replace('\n</b>', '</b>\n').replace('\n</i>', '</i>\n').replace('\n</u>', '</u>\n')
+            text = text.replace('\n</s>', '</s>\n').replace('\n</code>', '</code>\n').replace('\n</a>', '</a>\n')
+            text = text.replace('\n</pre>', '</pre>\n')
+            text = text.replace('<pre>', '```').replace('</pre>', '\n```')
+        return text
+
     def __parse_text(self, text):
-        text = replacements(text)
+        text = self.replacements(text)
         if len(text.split('\n')) == 1:
             self.issue_title = text
             self.comment = ''
@@ -52,15 +55,15 @@ class TgIssueMessage:
             self.comment = '\n'.join(text.split('\n')[1:])
 
     def __parse_reopen_text(self, text):
-        self.issue_url, self.issue_title = extract_href(text)
+        self.issue_url, self.issue_title = self.extract_href(text)
         self.set_issue_url(self.issue_url)
 
     def __parse_bot_text(self, text):
-        text = replacements(text)
+        text = self.replacements(text)
         st = text.split('\n')
-        self.issue_url, self.issue_title = extract_href(st[0].replace('🏷 ', ''))
-        self.repo_url, self.repo_name = extract_href(st[1].replace('🗄 ', '').replace('⚠️ ', ''))
-        self.assigned_url, self.assigned = extract_href(st[2].replace('👤 ', ''))
+        self.issue_url, self.issue_title = self.extract_href(st[0].replace('🏷 ', ''))
+        self.repo_url, self.repo_name = self.extract_href(st[1].replace('🗄 ', '').replace('⚠️ ', ''))
+        self.assigned_url, self.assigned = self.extract_href(st[2].replace('👤 ', ''))
         if len(st) > 3:
             self.comment = '\n'.join(st[3:])
 
