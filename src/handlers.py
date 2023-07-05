@@ -18,10 +18,6 @@ settings = Settings()
 github = Github(settings.GH_ORGANIZATION_NICKNAME, settings.GH_ACCOUNT_TOKEN)
 
 
-async def native_error_handler(update, context):
-    pass
-
-
 def error_handler(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
@@ -204,7 +200,8 @@ async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except GithubIssueDisabledError:
         await context.bot.answer_callback_query(update.callback_query.id, 'У этого репозитория отключены Issue.')
         logging.warning(f'{str_sender_info(update)} Try to open issue, but issue for {repo_name} disabled')
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_start')]])
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create',
+                                                               callback_data='repos_start')]])
         return keyboard, imessage.get_text()
 
     if r.status_code == 201:

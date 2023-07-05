@@ -55,7 +55,7 @@ class Github:
         return r.json()
 
     def get_repos(self, page_info):
-        params = {'ghquery': f'org:{self.organization_nickname} archived:false fork:true is:public sort:updated'}
+        params = {'gh_query': f'org:{self.organization_nickname} archived:false fork:true is:public sort:updated'}
         if page_info == 'repos_start':
             r = self.client.execute(self.q_get_repos, operation_name='getReposInit', variable_values=params)
         elif page_info.startswith('repos_after'):

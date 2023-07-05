@@ -8,7 +8,7 @@ from telegram.ext import filters
 
 from src.settings import Settings
 from src.handlers import handler_start, handler_help, handler_md_guide,\
-    handler_button, handler_message, native_error_handler
+    handler_button, handler_message
 
 tg_log_handler = logging.FileHandler("issue_tgbot_telegram_updater.log")
 tg_log_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
@@ -32,5 +32,4 @@ if __name__ == '__main__':
     application.add_handler(CallbackQueryHandler(handler_button))
     application.add_handler(MessageHandler(filters.Entity("mention"), handler_message))
     application.add_handler(MessageHandler(filters.ATTACHMENT, handler_message))
-    application.add_error_handler(native_error_handler)
     application.run_polling()

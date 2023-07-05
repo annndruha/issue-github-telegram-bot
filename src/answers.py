@@ -33,7 +33,7 @@ ans = {
   * sub_list_item
 - [ ] Empty checkbox
 - [x] Done checkbox
-$latex = \\frac{e^5}{\pi}$
+$latex = \\frac{e^5}{\\pi}$
 **bold**
 *italic*
 `inline_code_block`

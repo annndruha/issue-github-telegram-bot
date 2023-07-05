@@ -1,5 +1,5 @@
-query getReposInit($ghquery: String!) {
-  repos: search(query: $ghquery, type: REPOSITORY, first: 9) {
+query getReposInit($gh_query: String!) {
+  repos: search(query: $gh_query, type: REPOSITORY, first: 9) {
     repositoryCount
     pageInfo {
       hasNextPage
@@ -18,8 +18,8 @@ query getReposInit($ghquery: String!) {
   }
 }
 
-query getReposAfter($ghquery: String!, $cursor: String!) {
-  repos: search(query: $ghquery, type: REPOSITORY, first: 9, after: $cursor) {
+query getReposAfter($gh_query: String!, $cursor: String!) {
+  repos: search(query: $gh_query, type: REPOSITORY, first: 9, after: $cursor) {
     repositoryCount
     pageInfo {
       hasNextPage
@@ -38,8 +38,8 @@ query getReposAfter($ghquery: String!, $cursor: String!) {
   }
 }
 
-query getReposBefore($ghquery: String!, $cursor: String!) {
-  repos: search(query: $ghquery, type: REPOSITORY, last: 9, before: $cursor) {
+query getReposBefore($gh_query: String!, $cursor: String!) {
+  repos: search(query: $gh_query, type: REPOSITORY, last: 9, before: $cursor) {
     repositoryCount
     pageInfo {
       hasNextPage
