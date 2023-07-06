@@ -19,7 +19,11 @@ Only for GitHub organizations repos issues (not for personal repos issues)
 
 5. Run Docker Example:
    ```commandline
-   docker run -e BOT_TOKEN=value1 -e BOT_NICKNAME=value2 -e GH_ACCOUNT_TOKEN=value3 -e GH_ORGANIZATION_NICKNAME=value4
+   docker run -e BOT_TOKEN=value1
+              -e BOT_NICKNAME=value2
+              -e GH_ACCOUNT_TOKEN=value3
+              -e GH_ORGANIZATION_NICKNAME=value4
+              -e ...
    ```
 6. Add to bot to group chat
 
