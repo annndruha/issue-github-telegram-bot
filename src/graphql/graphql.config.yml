@@ -1,0 +1,11 @@
+# This file used by PyCharm GraphQL plugin
+# https://github.com/JetBrains/js-graphql-intellij-plugin
+schema: schema.github.graphql
+extensions:
+  endpoints:
+    Default GraphQL Endpoint:
+      url: https://api.github.com/graphql
+      headers:
+        Accept: application/vnd.github+json
+        Authorization: Bearer ${GH_ACCOUNT_TOKEN}
+      introspect: false
