@@ -9,13 +9,15 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CallbackContext
 from telegram.constants import ParseMode
 
+from gql.transport.exceptions import TransportError, TransportQueryError
+
 from src.settings import Settings
 from src.issue_message import TgIssueMessage
 from src.github_api import Github, GithubIssueDisabledError
 from src.answers import ans
 
 settings = Settings()
-github = Github(settings.GH_ORGANIZATION_NICKNAME, settings.GH_ACCOUNT_TOKEN)
+github = Github(settings)
 
 
 async def native_error_handler(update, context):
@@ -158,7 +160,7 @@ def __keyboard_repos(page_info):
 
     buttons = []
     for repo in repos_info['edges']:
-        buttons.append([InlineKeyboardButton(repo['node']['name'], callback_data='repo_' + repo['node']['name'])])
+        buttons.append([InlineKeyboardButton(repo['node']['name'], callback_data='repo_' + repo['node']['id'])])
 
     buttons.append([])
     if repos_info['pageInfo']['hasPreviousPage']:
@@ -193,35 +195,28 @@ def __keyboard_assign(page):
 
 
 async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    repo_name = str(update.callback_query.data.split('_')[1])
+    repo_id = str(update.callback_query.data.split('_', 1)[1])
     imessage = TgIssueMessage(update.callback_query.message.text_html)
 
     link_to_msg = __get_link_to_telegram_message(update)
     github_comment = imessage.comment + ans['issue_open'].format(update.callback_query.from_user.full_name, link_to_msg)
 
     try:
-        r = github.open_issue(repo_name, imessage.issue_title, github_comment)
-    except GithubIssueDisabledError:
-        await context.bot.answer_callback_query(update.callback_query.id, 'У этого репозитория отключены Issue.')
-        logging.warning(f'{str_sender_info(update)} Try to open issue, but issue for {repo_name} disabled')
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create',
-                                                               callback_data='repos_start')]])
-        return keyboard, imessage.get_text()
-
-    if r.status_code == 201:
-        response = r.json()
-        imessage.set_issue_url(response['html_url'])
+        r = github.open_issue(repo_id, imessage.issue_title, github_comment)
+        imessage.set_issue_url(r['createIssue']['issue']['url'])
 
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
                                           InlineKeyboardButton('👤', callback_data='assign_1'),
                                           InlineKeyboardButton('❌', callback_data='close')]])
-        logging.info(f'{str_sender_info(update)} Succeeded open Issue: {response["html_url"]}')
-        threading.Thread(target=github.add_to_scrum, args=(response['node_id'], )).start()
+        logging.info(f'''{str_sender_info(update)} Succeeded open Issue: {r['createIssue']['issue']['url']}''')
+        if settings.GH_SCRUM_STATE:
+            threading.Thread(target=github.add_to_scrum, args=(r['createIssue']['issue']['id'], )).start()
 
-    else:
-        await context.bot.answer_callback_query(update.callback_query.id, f'Response code: {r.status_code}')
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
-        logging.error(f'{str_sender_info(update)} Failed to open Issue [{r.status_code}] {r.text}')
+    except TransportQueryError as err:
+        await context.bot.answer_callback_query(update.callback_query.id, f'''{err.errors[0]['message']}''')
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create',
+                                                               callback_data='repos_start')]])
+        logging.error(f'{str_sender_info(update)} Failed to open Issue: {err.args}')
 
     return keyboard, imessage.get_text()
 

@@ -12,6 +12,7 @@ query getReposInit($gh_query: String!) {
         ... on Repository {
           name
           url
+          id
         }
       }
     }
@@ -32,6 +33,7 @@ query getReposAfter($gh_query: String!, $cursor: String!) {
         ... on Repository {
           name
           url
+          id
         }
       }
     }
@@ -52,6 +54,7 @@ query getReposBefore($gh_query: String!, $cursor: String!) {
         ... on Repository {
           name
           url
+          id
         }
       }
     }

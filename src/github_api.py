@@ -7,20 +7,22 @@ from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
 from gql.transport.requests import log as requests_logger
 requests_logger.setLevel(logging.WARNING)
+logging.getLogger("httpx").propagate = False
 
 
 class Github:
-    def __init__(self, organization_nickname, token):
-        self.organization_nickname = organization_nickname
-        self.issue_url = 'https://api.github.com/repos/' + organization_nickname + '/{}/issues'
-        self.org_repos_url = f'https://api.github.com/orgs/{organization_nickname}/repos'
-        self.org_members_url = f'https://api.github.com/orgs/{organization_nickname}/members'
+    def __init__(self, settings):
+        self.to_scrum = True
+        self.settings = settings
+        self.organization_nickname = settings.GH_ORGANIZATION_NICKNAME
+        self.issue_url = 'https://api.github.com/repos/' + settings.GH_ORGANIZATION_NICKNAME + '/{}/issues'
+        self.org_members_url = f'https://api.github.com/orgs/{settings.GH_ORGANIZATION_NICKNAME}/members'
 
         self.session = requests.Session()
 
         self.headers = {
             'Accept': 'application/vnd.github+json',
-            'Authorization': f'Bearer {token}',
+            'Authorization': f'Bearer {settings.GH_ACCOUNT_TOKEN}',
             'X-GitHub-Api-Version': '2022-11-28',
             'Content-Type': 'application/x-www-form-urlencoded'
         }
@@ -43,27 +45,22 @@ class Github:
             self.q_get_repos = gql(f.read())
         with open('src/graphql/add_to_scrum.graphql') as f:
             self.q_add_to_scrum = gql(f.read())
+        with open('src/graphql/issue_actions.graphql') as f:
+            self.q_issue_actions = gql(f.read())
 
-    def open_issue(self, repo, title, comment):
-        payload = {'title': title, 'body': comment, 'projects': f'{self.organization_nickname}/7'}
-        r = self.session.post(self.issue_url.format(repo), headers=self.headers, json=payload)
-        if 'Issues are disabled for this repo' in r.text:
-            raise GithubIssueDisabledError
+    def open_issue(self, repo_id, title, body):
+        params = {'repositoryId': repo_id, 'title': title, 'body': body}
+        r = self.client.execute(self.q_issue_actions, operation_name='CreateIssue', variable_values=params)
         return r
-
-    def old_get_repos(self, page=1):
-        data = {'sort': 'pushed', 'per_page': 9, 'page': page}
-        r = self.session.get(self.org_repos_url, headers=self.headers, params=data)
-        return r.json()
 
     def get_repos(self, page_info):
         params = {'gh_query': f'org:{self.organization_nickname} archived:false fork:true is:public sort:updated'}
-        if page_info == 'repos_start':
+        if page_info == 'repos_start':  # start page
             r = self.client.execute(self.q_get_repos, operation_name='getReposInit', variable_values=params)
-        elif page_info.startswith('repos_after'):
+        elif page_info.startswith('repos_after'):  # next page
             params['cursor'] = page_info.split('_')[2]
             r = self.client.execute(self.q_get_repos, operation_name='getReposAfter', variable_values=params)
-        else:  # repos_before
+        else:  # previous page
             params['cursor'] = page_info.split('_')[2]
             r = self.client.execute(self.q_get_repos, operation_name='getReposBefore', variable_values=params)
         return r['repos']
@@ -98,17 +95,17 @@ class Github:
 
     def add_to_scrum(self, node_id):
         try:
-            params = {'projectId': 'PVT_kwDOBaPiZM4AFiz-',
+            params = {'projectId': self.settings.GH_SCRUM_ID,
                       'contentId': node_id}
             r = self.client.execute(self.q_add_to_scrum, operation_name='addToScrum', variable_values=params)
     
             item_id = r['addProjectV2ItemById']['item']['id']
             logging.info(f'Node {node_id} successfully added to scrum with contentId= {item_id}')
     
-            params = {'projectId': 'PVT_kwDOBaPiZM4AFiz-',
+            params = {'projectId': self.settings.GH_SCRUM_ID,
                       'itemId': item_id,
-                      'fieldId': 'PVTSSF_lADOBaPiZM4AFiz-zgDMeOc',
-                      'value': '4a4a1bb5'}  # BACKLOG_OPTION_ID
+                      'fieldId': self.settings.GH_SCRUM_FIELD_ID,
+                      'value': self.settings.GH_SCRUM_FIELD_DEFAULT_STATE}  # backlog column
             r = self.client.execute(self.q_add_to_scrum, operation_name='setScrumStatus', variable_values=params)
             if 'errors' in r:
                 logging.warning(f'''itemId={item_id} not set status. Reason: {r['errors']}''')
