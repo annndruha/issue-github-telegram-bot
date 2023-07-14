@@ -1,34 +1,90 @@
 mutation CreateIssue ($repositoryId: ID!, $title: String!, $body: String!) {
-  createIssue(
-    input: {
-      repositoryId: $repositoryId,
-      title: $title,
-      body: $body
+    createIssue(
+        input: {
+            repositoryId: $repositoryId,
+            title: $title,
+            body: $body
+        }
+    ) {
+        issue {
+            id
+            url
+        }
     }
-  ) {
-    issue {
-      number
-      body
-      url
-      id
-    }
-  }
 }
 
-mutation CreateIssueScrum ($repositoryId: ID!, $title: String!, $body: String!, $projectIds: [ID!]) {
-  createIssue(
-    input: {
-      repositoryId: $repositoryId,
-      title: $title,
-      body: $body,
-      projectIds: $projectIds
+mutation CloseIssue($issueId: ID!) {
+    closeIssue(
+        input: {
+            issueId: $issueId,
+            stateReason: NOT_PLANNED
+        }
+    ) {
+        issue {
+            id
+            url
+        }
     }
-  ) {
-    issue {
-      number
-      body
-      url
-      id
+}
+
+mutation ReopenIssue($issueId: ID!) {
+    reopenIssue(
+        input: {
+            issueId: $issueId
+        }
+    ) {
+        issue {
+            id
+            url
+            body
+            assignees (first: 1){
+                edges {
+                    node {
+                        name
+                        login
+                    }
+                }
+            }
+        }
     }
-  }
+}
+
+mutation SetIssueAssign($issueId: ID!, $assigneeIds: [ID!]){
+    updateIssue (
+        input: {
+            id: $issueId,
+            assigneeIds: $assigneeIds}){
+        issue {
+            id
+            url
+            assignees (first: 1){
+                edges {
+                    node {
+                        name
+                        login
+                    }
+                }
+            }
+        }
+    }
+}
+
+mutation TransferIssue($repositoryId: ID!, $issueId: ID!){
+    transferIssue (
+        input:{
+            repositoryId: $repositoryId,
+            issueId: $issueId}){
+        issue {
+            id
+            url
+            assignees (first: 1){
+                edges {
+                    node {
+                        name
+                        login
+                    }
+                }
+            }
+        }
+    }
 }

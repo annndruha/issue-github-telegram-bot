@@ -2,20 +2,22 @@
 # 2023
 
 import logging
+import functools
 import threading
 import traceback
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CallbackContext
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatType
 
-from gql.transport.exceptions import TransportError, TransportQueryError
+from gql.transport.exceptions import TransportQueryError, TransportAlreadyConnected
 
 from src.settings import Settings
 from src.issue_message import TgIssueMessage
-from src.github_api import Github, GithubIssueDisabledError
-from src.answers import ans
+from src.github_api import Github
+from src.answers import Answers
 
+ans = Answers()
 settings = Settings()
 github = Github(settings)
 
@@ -28,96 +30,115 @@ def error_handler(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await func(update, context)
+        except TransportAlreadyConnected as err:
+            await context.bot.send_message(chat_id=update.callback_query.message.chat_id,
+                                           message_thread_id=update.callback_query.message.message_thread_id,
+                                           text='The previous request is still being processed.\nPlease wait...')
+            logging.warning(f'TransportAlreadyConnected: {err.args}')
+
+        except TransportQueryError as err:
+            repo_name = 'Unknown'
+            for kb in update.callback_query.message.reply_markup.inline_keyboard:
+                if kb[0].callback_data == update.callback_query.data:
+                    repo_name = kb[0].text
+
+            await context.bot.send_message(chat_id=update.callback_query.message.chat_id,
+                                           message_thread_id=update.callback_query.message.message_thread_id,
+                                           text=f'''{repo_name}: {err.errors[0]['message']}''')
+            logging.error(f'Failed to open Issue: {err.args}')
         except Exception as err:
             logging.error(err)
             traceback.print_tb(err.__traceback__)
+    return wrapper
+
+
+def log_formatter(func):
+    @functools.wraps(func)
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        if update.callback_query is None:
+            logging.info(f'[{update.message.from_user.id} {update.message.from_user.full_name}] '
+                         f'[{func.__name__}]: {repr(update.message.text)}')
+        else:
+            logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}] '
+                         f'[{update.callback_query.message.id}] [{func.__name__}] '
+                         f'callback_data: {update.callback_query.data}')
+        await func(update, context)
 
     return wrapper
 
 
-def str_sender_info(update):
-    if update.callback_query is None:
-        return f'[{update.message.from_user.id} {update.message.from_user.full_name}] [  ]'
-    else:
-        return f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}] ' \
-               f'[{update.callback_query.message.id}] callback_data={update.callback_query.data}'
-
-
 @error_handler
+@log_formatter
 async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logging.info(f'{str_sender_info(update)} call /start')
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
-                                   text=ans['start'].format(settings.GH_ORGANIZATION_NICKNAME),
+                                   text=ans.start.format(settings.GH_ORGANIZATION_NICKNAME),
                                    disable_web_page_preview=True,
                                    parse_mode=ParseMode('HTML'))
 
 
 @error_handler
+@log_formatter
 async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logging.info(f'{str_sender_info(update)} call /help')
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
-                                   text=ans['help'].format(settings.BOT_NICKNAME),
+                                   text=ans.help.format(settings.BOT_NICKNAME),
                                    disable_web_page_preview=True,
                                    parse_mode=ParseMode('HTML'))
 
 
 @error_handler
+@log_formatter
 async def handler_md_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logging.info(f'{str_sender_info(update)} call /md_guide')
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
-                                   text=ans['markdown_guide_tg'],
+                                   text=ans.markdown_guide_tg,
                                    disable_web_page_preview=True,
                                    parse_mode=ParseMode('HTML'))
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
-                                   text=ans['markdown_guide_md'],
+                                   text=ans.markdown_guide_md,
                                    disable_web_page_preview=True,
                                    )
 
 
 @error_handler
+@log_formatter
 async def handler_button(update: Update, context: CallbackContext) -> None:
-    logging.info(f'{str_sender_info(update)}')
     callback_data = update.callback_query.data
+    action = callback_data.split('_', 1)[0]
     text = update.callback_query.message.text_html
 
-    if callback_data == 'setup':
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
-                                          InlineKeyboardButton('👤', callback_data='assign_1'),
-                                          InlineKeyboardButton('❌', callback_data='close')]])
-    elif callback_data == 'quite':
-        imessage = TgIssueMessage(update.callback_query.message.text_html)
-        if not imessage.is_created():
-            keyboard = InlineKeyboardMarkup(
-                [[InlineKeyboardButton('⚠️ Select repo to create', callback_data='repos_start')]])
-        else:
-            keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
+    match action:
+        case 'setup':
+            issue_id = __search_issue_id_in_keyboard(update)
+            keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data=f'quite_{issue_id}'),
+                                              InlineKeyboardButton('🗄 ', callback_data=f'repos_start'),
+                                              InlineKeyboardButton('👤', callback_data='members_start'),
+                                              InlineKeyboardButton('❌', callback_data=f'close_{issue_id}')]])
+        case 'quite':
+            if update.callback_query.data == 'quite_start':
+                keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create',
+                                                                       callback_data='repos_start')]])
+            else:
+                issue_id = __search_issue_id_in_keyboard(update)
+                keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Setup', callback_data=f'setup_{issue_id}')]])
+        case 'close':
+            keyboard, text = __close_issue(update)
+        case 'reopen':
+            keyboard, text = __reopen_issue(update)
+        case 'members':
+            keyboard = __keyboard_members(update)
+        case 'repos':
+            keyboard = __keyboard_repos(update)
+        case 'repo':
+            keyboard, text = __create_issue(update)
+        case 'assign':
+            keyboard, text = __set_assign(update)
+        case _:
+            keyboard, text = None, 'Probably bot updated, issue can\'t be change.'
+            logging.error('Old keyboard callback')
 
-    elif callback_data == 'close':
-        keyboard, text = __close_issue(update)
-
-    elif callback_data == 'reopen':
-        keyboard, text = __reopen_issue(update)
-
-    elif callback_data.startswith('repos_'):
-        keyboard = __keyboard_repos(callback_data)
-
-    elif callback_data.startswith('repo_'):
-        keyboard, text = await __create_issue(update, context)
-
-    elif callback_data.startswith('assign_'):
-        page = int(callback_data.split('_')[1])
-        keyboard = __keyboard_assign(page)
-
-    elif callback_data.startswith('member_'):
-        keyboard, text = __set_assign(update)
-
-    else:
-        keyboard, text = None, 'Видимо бот обновился, эту issue нельзя настроить'
-        logging.error(f'Old callback: {str_sender_info(update)}')
     await update.callback_query.edit_message_text(text=text,
                                                   reply_markup=keyboard,
                                                   disable_web_page_preview=True,
@@ -125,6 +146,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
 
 
 @error_handler
+@log_formatter
 async def handler_message(update: Update, context: CallbackContext) -> None:
     mentions = update.effective_message.parse_entities(["mention"])
     captions = update.effective_message.parse_caption_entities(["mention"])
@@ -133,19 +155,19 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
         text = update.message.text_html.replace(settings.BOT_NICKNAME, '').strip()
     elif settings.BOT_NICKNAME.lower() in [caption.lower() for caption in list(captions.values())]:
         text = update.message.caption_html.replace(settings.BOT_NICKNAME, '').strip()
+    elif update.message.chat.type == ChatType.PRIVATE:
+        text = update.message.text_html
     else:
         return
 
     if len(text) == 0:
-        text = 'После упоминания требуется ввести название issue. Больше в /help'
+        text = ans.no_title
         keyboard = None
-        logging.warning(f'{str_sender_info(update)} call with no title')
     else:
         imessage = TgIssueMessage(text, from_user=True)
         text = imessage.get_text()
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create',
                                                                callback_data='repos_start')]])
-        logging.info(f'{str_sender_info(update)} create draft with message:{repr(update.message.text)}')
 
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
@@ -155,8 +177,9 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
                                    parse_mode=ParseMode('HTML'))
 
 
-def __keyboard_repos(page_info):
-    repos_info = github.get_repos(page_info)
+def __keyboard_repos(update):
+    repos_info = github.get_repos(update.callback_query.data)
+    issue_id = __search_issue_id_in_keyboard(update)
 
     buttons = []
     for repo in repos_info['edges']:
@@ -167,7 +190,10 @@ def __keyboard_repos(page_info):
         cb_data = f'''repos_before_{repos_info['pageInfo']['startCursor']}'''
         buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=cb_data))
 
-    buttons[-1].append(InlineKeyboardButton('↩️ Выйти', callback_data='quite'))
+    if issue_id is not None:
+        buttons[-1].append(InlineKeyboardButton('↩️ Back', callback_data=f'quite_{issue_id}'))
+    else:
+        buttons[-1].append(InlineKeyboardButton('↩️ Back', callback_data=f'quite_start'))
 
     if repos_info['pageInfo']['hasNextPage']:
         cb_data = f'''repos_after_{repos_info['pageInfo']['endCursor']}'''
@@ -176,113 +202,106 @@ def __keyboard_repos(page_info):
     return InlineKeyboardMarkup(buttons)
 
 
-def __keyboard_assign(page):
-    members = github.get_members(page)
-    if len(members) == 0:
-        page = 1
-        members = github.get_members(page)
-        if len(members) == 0:
-            return InlineKeyboardMarkup([[InlineKeyboardButton('↩️ Выйти', callback_data='quite')]])
+def __keyboard_members(update):
+    members = github.get_members(update.callback_query.data)
+    issue_id = __search_issue_id_in_keyboard(update)
 
-    buttons = [[InlineKeyboardButton(member['login'], callback_data='member_' + member['login'])] for member in members]
+    buttons = []
+    for member in members['edges']:
+        buttons.append([InlineKeyboardButton(member['node']['login'],
+                                             callback_data='assign_' + member['node']['id'])])
+
     buttons.append([])
-    if page > 1:
-        buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=f'assign_{page - 1}'))
-    buttons[-1].append(InlineKeyboardButton('↩️ Выйти', callback_data='quite'))
-    buttons[-1].append(InlineKeyboardButton('➡️', callback_data=f'assign_{page + 1}'))
+    if members['pageInfo']['hasPreviousPage']:
+        cb_data = f'''members_before_{members['pageInfo']['startCursor']}'''
+        buttons[-1].append(InlineKeyboardButton('⬅️', callback_data=cb_data))
+
+    buttons[-1].append(InlineKeyboardButton('↩️ Back', callback_data=f'quite_{issue_id}'))
+
+    if members['pageInfo']['hasNextPage']:
+        cb_data = f'''members_after_{members['pageInfo']['endCursor']}'''
+        buttons[-1].append(InlineKeyboardButton('➡️', callback_data=cb_data))
 
     return InlineKeyboardMarkup(buttons)
 
 
-async def __create_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    repo_id = str(update.callback_query.data.split('_', 1)[1])
+def __create_issue(update: Update):
+    repo_id = __get_action_value(update)
     imessage = TgIssueMessage(update.callback_query.message.text_html)
 
-    link_to_msg = __get_link_to_telegram_message(update)
-    github_comment = imessage.comment + ans['issue_open'].format(update.callback_query.from_user.full_name, link_to_msg)
-
-    try:
+    issue_id = __search_issue_id_in_keyboard(update)
+    if issue_id is not None:
+        r = github.transfer_issue(repo_id, issue_id)
+        imessage.set_issue_url(r['transferIssue']['issue']['url'])
+        issue_id = r['transferIssue']['issue']['id']
+        # TODO: Probably this is gitHub bug
+        # Check this: https://github.com/orgs/community/discussions/60896
+        if len(r['transferIssue']['issue']['assignees']['edges']) != 0:
+            imessage.set_assigned(r['transferIssue']['issue']['assignees']['edges'][0]['node']['login'])
+        logging.info(f'''Succeeded transferred Issue: {r['transferIssue']['issue']['url']}''')
+    else:
+        link_to_msg = __get_link_to_telegram_message(update)
+        github_comment = imessage.comment + ans.issue_open.format(update.callback_query.from_user.full_name, link_to_msg)
         r = github.open_issue(repo_id, imessage.issue_title, github_comment)
-        imessage.set_issue_url(r['createIssue']['issue']['url'])
 
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data='quite'),
-                                          InlineKeyboardButton('👤', callback_data='assign_1'),
-                                          InlineKeyboardButton('❌', callback_data='close')]])
-        logging.info(f'''{str_sender_info(update)} Succeeded open Issue: {r['createIssue']['issue']['url']}''')
+        imessage.set_issue_url(r['createIssue']['issue']['url'])
+        issue_id = r['createIssue']['issue']['id']
+        logging.info(f'''Succeeded open Issue: {r['createIssue']['issue']['url']}''')
         if settings.GH_SCRUM_STATE:
             threading.Thread(target=github.add_to_scrum, args=(r['createIssue']['issue']['id'], )).start()
 
-    except TransportQueryError as err:
-        await context.bot.answer_callback_query(update.callback_query.id, f'''{err.errors[0]['message']}''')
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('⚠️ Select repo to create',
-                                                               callback_data='repos_start')]])
-        logging.error(f'{str_sender_info(update)} Failed to open Issue: {err.args}')
-
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data=f'quite_{issue_id}'),
+                                      InlineKeyboardButton('🗄 ', callback_data=f'repos_start'),
+                                      InlineKeyboardButton('👤', callback_data=f'members_start'),
+                                      InlineKeyboardButton('❌', callback_data=f'close_{issue_id}')]])
     return keyboard, imessage.get_text()
 
 
 def __set_assign(update: Update):
-    new_assigned = str(update.callback_query.data.split('_')[1])
+    assign_to_id = __get_action_value(update)
+    issue_id = __search_issue_id_in_keyboard(update)
     imessage = TgIssueMessage(update.callback_query.message.text_html)
 
-    r, status_code = github.get_issue(imessage.issue_url)
-    if status_code != 200:
-        return None, imessage.get_problem_text(r)
+    r = github.set_assignee(issue_id, assign_to_id)
 
-    assign_github_comment = r['body'] + ans['assign_change'].format(imessage.assigned, new_assigned,
-                                                                    update.callback_query.from_user.full_name)
-
-    r = github.set_assignee(imessage.issue_url, new_assigned, assign_github_comment)
-    if r.status_code != 200:
-        return None, imessage.get_problem_text(r)
-
+    new_assigned = r['updateIssue']['issue']['assignees']['edges'][0]['node']['login']
     imessage.set_assigned(new_assigned)
-    return InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]]), imessage.get_text()
+    logging.info(f'Set assign to {new_assigned}')
+    return InlineKeyboardMarkup([[InlineKeyboardButton('Setup',
+                                                       callback_data=f'setup_{issue_id}')]]), imessage.get_text()
 
 
 def __close_issue(update: Update):
     imessage = TgIssueMessage(update.callback_query.message.text_html)
+    issue_id = __search_issue_id_in_keyboard(update)
 
-    r, status_code = github.get_issue(imessage.issue_url)
-    if status_code != 200:
-        return None, imessage.get_problem_text(r)
+    r = github.close_issue(issue_id)
 
-    close_github_comment = r['body'] + ans['issue_close'].format(update.callback_query.from_user.full_name)
-
-    r = github.close_issue(imessage.issue_url, close_github_comment)
-    if r.status_code != 200:
-        return None, imessage.get_problem_text(r)
-
+    assert type(r['closeIssue']['issue']['id']) is str
     text = imessage.get_close_message(update.callback_query.from_user.full_name)
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('🔄 Reopen', callback_data='reopen')]])
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('🔄 Reopen', callback_data=f'reopen_{issue_id}')]])
 
-    logging.info(f'{str_sender_info(update)} Succeeded closed Issue: {imessage.issue_url}')
+    logging.info(f'Succeeded closed Issue: {imessage.issue_url}')
     return keyboard, text
 
 
-def __reopen_issue(update):
+def __reopen_issue(update: Update):
     imessage = TgIssueMessage(update.callback_query.message.text_html, from_reopen=True)
-    r, status_code = github.get_issue(imessage.issue_url)
-    if status_code != 200:
-        return None, imessage.get_problem_text(r)
+    issue_id = __search_issue_id_in_keyboard(update)
 
-    reopen_github_comment = r['body'] + ans['issue_reopen'].format(update.callback_query.from_user.full_name)
+    r = github.reopen_issue(issue_id)
 
-    r, status_code = github.reopen_issue(imessage.issue_url, reopen_github_comment)
-    if status_code != 200:
-        return None, imessage.get_problem_text(r)
+    if len(r['reopenIssue']['issue']['assignees']['edges']) != 0:
+        imessage.set_assigned(r['reopenIssue']['issue']['assignees']['edges'][0]['node']['login'])
 
-    if len(r['assignees']) != 0:
-        imessage.set_assigned(r['assignees'][0]['login'])
+    imessage.comment = r['reopenIssue']['issue']['body'].split('\n>')[0]
 
-    imessage.comment = r['body'].split('\n>')[0]
-
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Настроить', callback_data='setup')]])
-    logging.info(f'{str_sender_info(update)} Succeeded Reopen Issue: {imessage.issue_url}')
+    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton('Setup', callback_data=f'setup_{issue_id}')]])
+    logging.info(f'Succeeded Reopen Issue: {imessage.issue_url}')
     return keyboard, imessage.get_text()
 
 
-def __get_link_to_telegram_message(update):
+def __get_link_to_telegram_message(update: Update):
     if update.callback_query.message.chat.type == "supergroup":
         message_thread_id = update.callback_query.message.message_thread_id
         message_thread_id = 1 if message_thread_id is None else message_thread_id  # If 'None' set '1'
@@ -292,3 +311,19 @@ def __get_link_to_telegram_message(update):
     else:
         logging.warning(f"Chat {update.callback_query.message.chat_id} is not a supergroup, can't create a msg link.")
         return 'telegram message.'
+
+
+def __get_action_value(update: Update):
+    return update.callback_query.data.split('_', 1)[1]
+
+
+def __search_issue_id_in_keyboard(update: Update):
+    kb = update.callback_query.message.reply_markup.inline_keyboard
+    issue_id = None
+    for kb_row in kb:
+        for kb_col in kb_row:
+            if kb_col.callback_data.startswith(('quite_', 'close_', 'setup_', 'reopen_')) and \
+                    kb_col.callback_data.split('_', 1)[1] != 'start':
+                issue_id = kb_col.callback_data.split('_', 1)[1]
+                return issue_id
+    return issue_id

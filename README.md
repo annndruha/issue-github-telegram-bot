@@ -5,6 +5,8 @@ Only for GitHub organizations repos issues (not for personal repos issues)
 
 1. You need to create telegram bot via [BotFather](https://t.me/BotFather) and get bot token
 2. Use your personal GitHub account or create another account, get [GitHub token](https://github.com/settings/tokens)
+Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read:user`, `project -> read:project`
+
 3. Next set the docker environment secrets:
    * `BOT_TOKEN` - From step 1
    * `BOT_NICKNAME` - From step 1
@@ -19,11 +21,7 @@ Only for GitHub organizations repos issues (not for personal repos issues)
 
 5. Run Docker Example:
    ```commandline
-   docker run -e BOT_TOKEN=value1
-              -e BOT_NICKNAME=value2
-              -e GH_ACCOUNT_TOKEN=value3
-              -e GH_ORGANIZATION_NICKNAME=value4
-              -e ...
+   docker run -e BOT_TOKEN=value1 -e BOT_NICKNAME=value2 -e GH_ACCOUNT_TOKEN=value3 -e GH_ORGANIZATION_NICKNAME=value4
    ```
 6. Add to bot to group chat
 

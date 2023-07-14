@@ -1,0 +1,59 @@
+query GetMembersInit($org: String!) {
+    organization(login: $org) {
+        membersWithRole(first: 9) {
+            pageInfo {
+                hasNextPage
+                endCursor
+                hasPreviousPage
+                startCursor
+            }
+            totalCount
+            edges {
+                node {
+                    login
+                    id
+                }
+            }
+        }
+    }
+}
+
+query GetMembersAfter($org: String!, $cursor: String!) {
+    organization(login: $org) {
+        membersWithRole(first: 9, after: $cursor) {
+            pageInfo {
+                hasNextPage
+                endCursor
+                hasPreviousPage
+                startCursor
+            }
+            totalCount
+            edges {
+                node {
+                    login
+                    id
+                }
+            }
+        }
+    }
+}
+
+query GetMembersBefore($org: String!, $cursor: String!) {
+    organization(login: $org) {
+        membersWithRole(last: 9, before: $cursor) {
+            pageInfo {
+                hasNextPage
+                endCursor
+                hasPreviousPage
+                startCursor
+            }
+            totalCount
+            edges {
+                node {
+                    login
+                    id
+                }
+            }
+        }
+    }
+}

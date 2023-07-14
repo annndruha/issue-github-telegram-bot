@@ -1,33 +1,38 @@
 # Marakulin Andrey https://github.com/Annndruha
 # 2023
 
-ans = {
-    'issue_open': '\n> Issue open by {} via {}',
-    'assign_change': '\n> Assign changed from {} to @{} by {}.',
-    'issue_close': '\n> Issue closed by {}.',
-    'issue_reopen': '\n> Issue reopened by {}.',
-    'help': 'Чтобы создать issue, упомяните меня и после упоминания введите название issue.'
-            '\nЕсли вы хотите указать описание, после названия issue сделайте перенос строки'
-            ' и напишите описание. Ниже пример сообщения для создания issue: \n\n'
-            '{} Разобраться в синтаксисе Markdown\nВ этой issue мне необходимо прочитать про синтаксис Markdown.'
-            '\nЯ могу это сделать вызвав команду бота: /md_guide',
-    'start': '🤖 Я <a href="https://github.com/Annndruha/issue-github-telegram-bot">бот</a>'
-             ' для создания issue в репозиториях '
-             '<a href="https://github.com/{}">организации</a> в GitHub.'
-             '\nЧтобы создать issue из личных сообщений, упомяните меня в вашем сообщении. Больше информации в /help',
-    'markdown_guide_tg': '''
-    Нативный стиль Telegram поддерживает следующее форматирование, которое преобразуется в Markdown в GitHub:
+from dataclasses import dataclass
+
+
+@dataclass
+class Answers:
+    issue_open = '\n> Issue open by {} via {}'
+    assign_change = '\n> Assign changed from {} to @{} by {}.'
+    issue_close = '\n> Issue closed by {}.'
+    issue_reopen = '\n> Issue reopened by {}.'
+    no_title = 'After the mention, you need to enter the title of the issue. More in /help'
+    help = 'To create an issue, mention me and after the mention enter the title of the issue.' \
+           '\nIf you want to provide a description, after the title of the issue, break the line and write a ' \
+           'description. Below is an example of a message to create an issue:\n\n' \
+           '{} This is issue title\n' \
+           'And start with this line is description' \
+           '\nAnother line of description.\nSee more by calling the bot command: /md_guide'
+    start = '🤖 I\'m <a href="https://github.com/Annndruha/issue-github-telegram-bot">bot</a>' \
+            ' for create issue in GitHub <a href="https://github.com/{}">organization</a>' \
+            '\nMore info in /help'
+    markdown_guide_tg = '''
+    Native Telegram styling are converted to Markdown in GitHub:
 <i>italic</i>
 <b>bold</b>
 <u>underline</u>
 <s>strike</s>
 <code>monospace_code</code>
-<span class="tg-spoiler">spoiler</span> (GitHub не поддерживает)
+<span class="tg-spoiler">spoiler</span> (GitHub not supported)
 <a href="https://github.com">link</a>
-''',
-    'markdown_guide_md': '''
-## А это синтаксис Markdown 
-### Это раздел 3 уровня
+'''
+    markdown_guide_md = '''
+## This is Markdown syntax 
+### Third level header
 * list_item
 * list_item
   * sub_list_item
@@ -41,13 +46,11 @@ $latex = \\frac{e^5}{\\pi}$
 |      markdown_table | version |
 |--------------------:|---------|
 |              Python | 3.11    |
-| python-telegram-bot | 20.0    |
+| python-telegram-bot | 20.1    |
 
 ```python
 # code block
 print('Hello, issue bot!')
 ```
 [md_link](github.com/annndruha/issue-github-telegram-bot)
-![md_image_link](https://picsum.photos/200)
     '''
-}
