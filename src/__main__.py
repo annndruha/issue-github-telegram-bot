@@ -29,6 +29,8 @@ settings = Settings()
 
 class StartWithBotMention(filters.MessageFilter):
     def filter(self, message):
+        if message.text is None:
+            return False
         return message.text.startswith(settings.BOT_NICKNAME)
 
 
