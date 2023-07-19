@@ -39,6 +39,8 @@ def error_handler(func):
                         await update.callback_query.edit_message_text(text=text)
                     case 'FORBIDDEN':
                         text = 'Issue disabled for this repo'
+                    case 'INSUFFICIENT_SCOPES':
+                        text = err.errors[0]['message'].replace(" Please modify your token's scopes at: https://github.com/settings/tokens.", "").replace("Your token has not been granted the required scopes to execute this query. ", "")
                     case _:
                         text = err.errors[0]['message']
             else:
