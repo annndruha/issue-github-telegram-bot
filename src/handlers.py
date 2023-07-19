@@ -289,7 +289,7 @@ def __create_new_issue(imessage: TgIssueMessage, repo_id: str, update: Update) -
 
     imessage.set_issue_url(r['createIssue']['issue']['url'])
     issue_id = r['createIssue']['issue']['id']
-    logging.info(f"Succeeded open Issue: {r['createIssue']['issue']['url']}")
+    logging.info(f"[Issue: {issue_id}] Succeeded open Issue: {r['createIssue']['issue']['url']}")
     return imessage, issue_id
 
 
@@ -305,7 +305,7 @@ def __transfer_exist_issue(imessage: TgIssueMessage, new_repo_id: str, issue_id:
     # Probably next 2 lines bot works by GitHub bug: https://github.com/orgs/community/discussions/60896
     if len(r['transferIssue']['issue']['assignees']['edges']) != 0:
         imessage.set_assigned(r['transferIssue']['issue']['assignees']['edges'][0]['node']['login'])
-    logging.info(f"Succeeded transferred Issue: {r['transferIssue']['issue']['url']}")
+    logging.info(f"[Issue: {issue_id}] Succeeded transferred Issue: {r['transferIssue']['issue']['url']}")
     return imessage, issue_id
 
 
@@ -321,7 +321,7 @@ def __set_assign(update: Update) -> (InlineKeyboardMarkup, str):
     new_assigned = r['updateIssue']['issue']['assignees']['edges'][0]['node']['login']
     imessage = TgIssueMessage(bot_html=update.callback_query.message.text_html)
     imessage.set_assigned(new_assigned)
-    logging.info(f'Set assign to {new_assigned}')
+    logging.info(f'[Issue: {issue_id}] Set assign to [{new_assigned} {member_id}]')
     return __get_keyboard_setup(issue_id), imessage.get_text()
 
 
@@ -335,7 +335,7 @@ def __close_issue(update: Update):
     imessage = TgIssueMessage(bot_html=update.callback_query.message.text_html)
     text = imessage.get_close_message(update.callback_query.from_user.full_name)
 
-    logging.info(f'Succeeded closed Issue: {imessage.issue_url}')
+    logging.info(f'[Issue: {issue_id}] Succeeded closed {imessage.issue_url}')
     return __get_keyboard_reopen(issue_id), text
 
 
@@ -356,7 +356,7 @@ def __reopen_issue(update: Update):
 
     imessage = TgIssueMessage()
     imessage.from_reopen(issue_url, title, body, login)
-    logging.info(f'Succeeded Reopen Issue: {imessage.issue_url}')
+    logging.info(f'[Issue: {issue_id}] Succeeded Reopen Issue: {imessage.issue_url}')
     return __get_keyboard_begin(update), imessage.get_text()
 
 
