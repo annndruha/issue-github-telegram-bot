@@ -11,7 +11,7 @@ In organization Telegram chat mention bot and write issue title (and optional de
 
 1. You need to create telegram bot via [BotFather](https://t.me/BotFather) and get bot token
 2. Use your personal GitHub account or create another account, get [GitHub token](https://github.com/settings/tokens).
-Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read:user`, `project -> read:project`
+Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read:user`
 
 3. Next set the docker environment secrets:
    * `BOT_TOKEN` - From step 1
@@ -21,7 +21,7 @@ Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read
    * `GH_ORGANIZATION_NICKNAME` - Organization login (nickname) for manage issue
    * `DOCKER_CONTAINER_NAME` - Name of docker container
 
-5. Run Docker Example (Or use `deploy.yml`):
+5. Run Docker Example (Or use [deploy.yml](https://github.com/annndruha/issue-github-telegram-bot/blob/main/.github/workflows/deploy.yml_template)):
    ```commandline
    docker run  --detach \
                --restart always \
@@ -32,3 +32,9 @@ Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read
                ghcr.io/annndruha/issue-github-telegram-bot:latest
    ```
 6. Add to bot to group chat
+7. (Optional, but recommended):
+   * Via [BotFather](https://t.me/BotFather) go to `Edit bot`/`Edit commands` and set this commands:
+     * `start - Hello message`
+     * `help - Usage instruction`
+     * `md_guide - Markdown syntax instruction`
+   * After this in personal messages with bot you will see a `menu` button
