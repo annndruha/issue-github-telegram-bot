@@ -4,7 +4,7 @@ Only for GitHub organizations repos issues (not for personal repos issues)
 #### Setup
 
 1. You need to create telegram bot via [BotFather](https://t.me/BotFather) and get bot token
-2. Use your personal GitHub account or create another account, get [GitHub token](https://github.com/settings/tokens)
+2. Use your personal GitHub account or create another account, get [GitHub token](https://github.com/settings/tokens).
 Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read:user`, `project -> read:project`
 
 3. Next set the docker environment secrets:

@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -17,8 +18,4 @@ class Settings(BaseSettings):
     GH_SCRUM_FIELD_ID: str = 'PVTSSF_lADOBaPiZM4AFiz-zgDMeOc'
     GH_SCRUM_FIELD_DEFAULT_STATE: str = '4a4a1bb5'
 
-
-    class Config:
-        """Pydantic BaseSettings config"""
-        case_sensitive = True
-        env_file = ".env"
+    model_config = ConfigDict(case_sensitive=True, env_file=".env", extra="allow")

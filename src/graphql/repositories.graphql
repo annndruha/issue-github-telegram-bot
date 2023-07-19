@@ -1,0 +1,84 @@
+query GetReposInit($org: String!){
+    organization(login: $org){
+        repositories (
+            first: 9,
+            isArchived: false,
+            orderBy: {field: PUSHED_AT, direction: DESC}
+        ){
+            totalCount
+            pageInfo {
+                hasNextPage
+                endCursor
+                hasPreviousPage
+                startCursor
+            }
+            edges {
+                node {
+                    ... on Repository {
+                        name
+                        url
+                        id
+                    }
+                }
+            }
+        }
+    }
+}
+
+query GetReposAfter($org: String!, $cursor: String!){
+    organization(login: $org){
+        repositories (
+            first: 9,
+            after: $cursor
+            isArchived: false,
+            orderBy: {field: PUSHED_AT, direction: DESC}
+        ){
+            totalCount
+            pageInfo {
+                hasNextPage
+                endCursor
+                hasPreviousPage
+                startCursor
+            }
+            edges {
+                node {
+                    ... on Repository {
+                        name
+                        url
+                        id
+                    }
+                }
+            }
+        }
+    }
+}
+
+query GetReposBefore($org: String!, $cursor: String!){
+    organization(login: $org){
+        repositories (
+            last: 9,
+            before: $cursor
+            isArchived: false,
+            orderBy: {field: PUSHED_AT, direction: DESC}
+        ){
+            totalCount
+            pageInfo {
+                hasNextPage
+                endCursor
+                hasPreviousPage
+                startCursor
+            }
+            edges {
+                node {
+                    ... on Repository {
+                        name
+                        url
+                        id
+                    }
+                }
+            }
+        }
+    }
+}
+
+

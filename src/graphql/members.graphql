@@ -10,8 +10,9 @@ query GetMembersInit($org: String!) {
             totalCount
             edges {
                 node {
-                    login
                     id
+                    login
+                    name
                 }
             }
         }
@@ -30,8 +31,9 @@ query GetMembersAfter($org: String!, $cursor: String!) {
             totalCount
             edges {
                 node {
-                    login
                     id
+                    login
+                    name
                 }
             }
         }
@@ -50,8 +52,9 @@ query GetMembersBefore($org: String!, $cursor: String!) {
             totalCount
             edges {
                 node {
-                    login
                     id
+                    login
+                    name
                 }
             }
         }

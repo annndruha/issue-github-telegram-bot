@@ -1,4 +1,4 @@
-mutation CreateIssue ($repositoryId: ID!, $title: String!, $body: String!) {
+mutation CreateIssue($repositoryId: ID!, $title: String!, $body: String!) {
     createIssue(
         input: {
             repositoryId: $repositoryId,
@@ -37,6 +37,7 @@ mutation ReopenIssue($issueId: ID!) {
             id
             url
             body
+            title
             assignees (first: 1){
                 edges {
                     node {
