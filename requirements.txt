@@ -1,6 +1,6 @@
-python-telegram-bot
-requests
-gql[all]
 aiohttp
+gql[requests]
+requests
 pydantic
 pydantic-settings
+python-telegram-bot
