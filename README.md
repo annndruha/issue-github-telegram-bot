@@ -3,7 +3,8 @@ Only for GitHub organizations repos issues (not for personal repos issues)
 
 #### Example usage:
 
-![image](https://user-images.githubusercontent.com/51162917/225610117-0a5689ec-1742-4c11-8938-de8d098b5092.png)
+In organization Telegram chat mention bot and write issue title (and optional description)
+![image](https://github.com/annndruha/issue-github-telegram-bot/assets/51162917/26d7e781-b1d8-40d7-9dd2-ca72afdb92d8)
 
 
 #### Setup
