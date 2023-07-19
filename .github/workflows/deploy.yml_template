@@ -1,0 +1,38 @@
+name: Build, publish and deploy docker
+
+on:
+  push:
+    branches: [ 'main' ]
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: annndruha/issue-github-telegram-bot
+
+jobs:
+  deploy-production:
+    name: Deploy Production
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: [ self-hosted, Linux ]
+    environment:
+      name: Production
+    env:
+      CONTAINER_NAME: ${{ vars.DOCKER_CONTAINER_NAME }}
+    permissions:
+      packages: read
+    steps:
+      - name: Pull new version
+        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Run new version
+        run: |
+          docker stop ${{ env.CONTAINER_NAME }} || true && docker rm ${{ env.CONTAINER_NAME }} || true
+          docker run \
+            --detach \
+            --restart always \
+            --env BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \
+            --env BOT_NICKNAME='${{ secrets.BOT_NICKNAME }}' \
+            --env GH_ACCOUNT_TOKEN='${{ secrets.GH_ACCOUNT_TOKEN }}' \
+            --env GH_ORGANIZATION_NICKNAME='${{ vars.GH_ORGANIZATION_NICKNAME }}' \
+            --name ${{ env.CONTAINER_NAME }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

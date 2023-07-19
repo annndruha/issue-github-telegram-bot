@@ -8,7 +8,6 @@ from gql.transport.requests import RequestsHTTPTransport
 
 class Github:
     def __init__(self, settings):
-        self.to_scrum = True
         self.settings = settings
 
         self.transport = RequestsHTTPTransport(
@@ -26,8 +25,6 @@ class Github:
             self.q_get_repos = gql(f.read())
         with open('src/graphql/members.graphql') as f:
             self.q_get_members = gql(f.read())
-        with open('src/graphql/scrum.graphql') as f:
-            self.q_add_to_scrum = gql(f.read())
         with open('src/graphql/issues.graphql') as f:
             self.q_issue_actions = gql(f.read())
 
@@ -74,22 +71,3 @@ class Github:
     def set_assignee(self, issue_id, member_id):
         params = {'issueId': issue_id, 'assigneeIds': [member_id]}
         return self.client.execute(self.q_issue_actions, operation_name='SetIssueAssign', variable_values=params)
-
-    def add_to_scrum(self, node_id):
-        try:
-            params = {'projectId': self.settings.GH_SCRUM_ID,
-                      'contentId': node_id}
-            r = self.client.execute(self.q_add_to_scrum, operation_name='AddToScrum', variable_values=params)
-    
-            item_id = r['addProjectV2ItemById']['item']['id']
-            logging.info(f'Node {node_id} successfully added to scrum with contentId= {item_id}')
-    
-            params = {'projectId': self.settings.GH_SCRUM_ID,
-                      'itemId': item_id,
-                      'fieldId': self.settings.GH_SCRUM_FIELD_ID,
-                      'value': self.settings.GH_SCRUM_FIELD_DEFAULT_STATE}  # backlog column
-            r = self.client.execute(self.q_add_to_scrum, operation_name='SetScrumStatus', variable_values=params)
-            if 'errors' in r:
-                logging.warning(f'''itemId={item_id} not set status. Reason: {r['errors']}''')
-        except Exception as err:
-            logging.error(f'Scrum adding FAILED: {err.args}')

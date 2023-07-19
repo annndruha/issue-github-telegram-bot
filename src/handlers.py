@@ -290,8 +290,6 @@ def __create_new_issue(imessage: TgIssueMessage, repo_id: str, update: Update) -
     imessage.set_issue_url(r['createIssue']['issue']['url'])
     issue_id = r['createIssue']['issue']['id']
     logging.info(f"Succeeded open Issue: {r['createIssue']['issue']['url']}")
-    if settings.GH_SCRUM_STATE:
-        threading.Thread(target=github.add_to_scrum, args=(r['createIssue']['issue']['id'],)).start()
     return imessage, issue_id
 
 
@@ -358,10 +356,6 @@ def __reopen_issue(update: Update):
 
     imessage = TgIssueMessage()
     imessage.from_reopen(issue_url, title, body, login)
-
-    if settings.GH_SCRUM_STATE:
-        threading.Thread(target=github.add_to_scrum, args=(issue_id,)).start()
-
     logging.info(f'Succeeded Reopen Issue: {imessage.issue_url}')
     return __get_keyboard_begin(update), imessage.get_text()
 
