@@ -15,7 +15,7 @@ Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read
 
 3. Next set the docker environment secrets:
    * `BOT_TOKEN` - From step 1
-   * `BOT_NICKNAME` - From step 1
+   * `BOT_NICKNAME` - From step 1 (Start with @)
    * `GH_ACCOUNT_TOKEN` - From step 2
 4. and environment variables
    * `GH_ORGANIZATION_NICKNAME` - Organization login (nickname) for manage issue
@@ -25,8 +25,8 @@ Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read
    ```commandline
    docker run  --detach \
                --restart always \
-               --env BOT_TOKEN='some_token_from_botFather' \
-               --env BOT_NICKNAME='nickname_from_botFather' \
+               --env BOT_TOKEN='352532:token_value_from_botFather' \
+               --env BOT_NICKNAME='@nickname_from_botFather' \
                --env GH_ACCOUNT_TOKEN='github_user_token' \
                --env GH_ORGANIZATION_NICKNAME='org_login' \
                ghcr.io/annndruha/issue-github-telegram-bot:latest
