@@ -9,19 +9,18 @@ In organization Telegram chat mention bot and write issue title (and optional de
 
 #### Setup
 
-1. You need to create telegram bot via [BotFather](https://t.me/BotFather) and get bot token
+1. You need to create telegram bot via [BotFather](https://t.me/BotFather), get bot token and add it to group chat with access messages rights.
 2. Use your personal GitHub account or create another account, get [GitHub token](https://github.com/settings/tokens).
-Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read:user`
+Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read:user`. Add account to your GitHub orgainzation.
 
 3. Next set the docker environment secrets:
    * `BOT_TOKEN` - From step 1
-   * `BOT_NICKNAME` - From step 1 (Start with @)
+   * `BOT_NICKNAME` - From step 1 (Must start with @)
    * `GH_ACCOUNT_TOKEN` - From step 2
 4. and environment variables
    * `GH_ORGANIZATION_NICKNAME` - Organization login (nickname) for manage issue
-   * `DOCKER_CONTAINER_NAME` - Name of docker container
 
-5. Run Docker Example (Or use [deploy.yml](https://github.com/annndruha/issue-github-telegram-bot/blob/main/.github/workflows/deploy.yml_template)):
+5. Run Docker (Or use github-runner with [deploy.yml](https://github.com/profcomff/issue-github-tgbot) and GitHub Enviroments):
    ```commandline
    docker run  --detach \
                --restart always \
@@ -31,8 +30,7 @@ Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read
                --env GH_ORGANIZATION_NICKNAME='org_login' \
                ghcr.io/annndruha/issue-github-telegram-bot:latest
    ```
-6. Add to bot to group chat
-7. (Optional, but recommended):
+6. (Optional, but recommended):
    * Via [BotFather](https://t.me/BotFather) go to `Edit bot`/`Edit commands` and set this commands:
      * `start - Hello message`
      * `help - Usage instruction`
