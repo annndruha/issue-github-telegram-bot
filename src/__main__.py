@@ -39,7 +39,7 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler('start', handler_start))
     application.add_handler(CommandHandler('help', handler_help))
     application.add_handler(CommandHandler('md_guide', handler_md_guide))
-    # application.add_handler(CommandHandler('issue', handler_message))
+    application.add_handler(CommandHandler('issue', handler_message))
     application.add_handler(CallbackQueryHandler(handler_button))
     application.add_handler(MessageHandler(StartWithBotMention(), handler_message))
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, handler_message))
