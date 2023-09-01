@@ -3,10 +3,12 @@
 
 import logging
 
-from telegram.ext import ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 from gql.transport.requests import log as requests_logger
+from telegram.ext import (ApplicationBuilder, CallbackQueryHandler,
+                          CommandHandler, MessageHandler, filters)
 
-from src.handlers import handler_button, handler_help, handler_md_guide, handler_message, handler_start
+from src.handlers import (handler_button, handler_help, handler_md_guide,
+                          handler_message, handler_start)
 from src.settings import Settings
 
 tg_log_handler = logging.FileHandler("issue_tgbot_telegram_updater.log")

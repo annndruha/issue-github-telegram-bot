@@ -9,11 +9,11 @@ from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ContextTypes
 
 from src.answers import Answers
+from src.errors_solver import errors_solver
 from src.github_api import Github
 from src.issue_message import TgIssueMessage
-from src.settings import Settings
-from src.errors_solver import errors_solver
 from src.log_formatter import log_formatter
+from src.settings import Settings
 
 ans = Answers()
 settings = Settings()
