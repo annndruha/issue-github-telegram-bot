@@ -1,7 +1,7 @@
 # Marakulin Andrey https://github.com/Annndruha
 # 2023
 
-import functools
+
 import logging
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -13,29 +13,11 @@ from src.github_api import Github
 from src.issue_message import TgIssueMessage
 from src.settings import Settings
 from src.errors_solver import errors_solver
+from src.log_formatter import log_formatter
 
 ans = Answers()
 settings = Settings()
 github = Github(settings)
-
-
-def log_formatter(func):
-    """
-    Every time for bot event print an actor and handler name. Optional print a message id and callback_data
-    """
-
-    @functools.wraps(func)
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if update.callback_query is None:
-            logging.info(f'[{update.message.from_user.id} {update.message.from_user.full_name}] '
-                         f'[{func.__name__}]: {repr(update.message.text)}')
-        else:
-            logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}] '
-                         f'[{update.callback_query.message.id}] [{func.__name__}] '
-                         f'callback_data: {update.callback_query.data}')
-        await func(update, context)
-
-    return wrapper
 
 
 @errors_solver

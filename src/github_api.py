@@ -1,12 +1,14 @@
 # Marakulin Andrey https://github.com/Annndruha
 # 2023
-import logging
 
 from gql import Client, gql
 from gql.transport.requests import RequestsHTTPTransport
 
 
 class Github:
+    """
+    Class for proceed GraphQL query's
+    """
     def __init__(self, settings):
         self.settings = settings
 
