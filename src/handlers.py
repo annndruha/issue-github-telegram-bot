@@ -115,7 +115,8 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
     Receive a private user message or group-chat bot mention
     and reply with issue template (or no title warning message).
     """
-    text_html = update.message.text_html.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
+    text_html = update.message.text_html or update.message.caption_html
+    text_html = text_html.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
 
     if len(text_html) == 0:
         await context.bot.send_message(chat_id=update.message.chat_id,
