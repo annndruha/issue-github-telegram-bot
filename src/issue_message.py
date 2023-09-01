@@ -26,9 +26,9 @@ class TgIssueMessage:
         """
         text = self.__replacements(text)
         st = text.split('\n')
-        self.issue_url, self.issue_title = self.__extract_href(st[0].replace('🏷', '', 1))
-        self.repo_url, self.repo_name = self.__extract_href(st[1].replace('🗄', '', 1).replace('⚠️ ', '', 1))
-        self.assigned_url, self.assigned = self.__extract_href(st[2].replace('👤', '', 1))
+        self.issue_url, self.issue_title = self.__extract_href(st[0].removeprefix('🏷'))
+        self.repo_url, self.repo_name = self.__extract_href(st[1].removeprefix('🗄').removeprefix('⚠️ '))
+        self.assigned_url, self.assigned = self.__extract_href(st[2].removeprefix('👤'))
         if len(st) > 3:
             self.body = '\n'.join(st[3:])
 
