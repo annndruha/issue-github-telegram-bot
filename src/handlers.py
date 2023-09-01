@@ -142,8 +142,8 @@ def __get_keyboard_setup(issue_id: str) -> InlineKeyboardMarkup:
     return keyboard with 4 buttons: hide setup, change repo, change assign and close issue
     """
     return InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data=f'quite_{issue_id}'),
-                                  InlineKeyboardButton('🗄 ', callback_data=f'rps_start'),
-                                  InlineKeyboardButton('👤', callback_data=f'members_start'),
+                                  InlineKeyboardButton('🗄 ', callback_data='rps_start'),
+                                  InlineKeyboardButton('👤', callback_data='members_start'),
                                   InlineKeyboardButton('❌', callback_data=f'close_{issue_id}')]])
 
 

@@ -1,4 +1,9 @@
 ## Bot for creation GitHub issue from Telegram chat
+
+[![version](https://img.shields.io/github/v/release/annndruha/issue-github-telegram-bot)](https://github.com/annndruha/issue-github-telegram-bot/releases)
+[![GitHub license](https://img.shields.io/github/license/annndruha/issue-github-telegram-bot.svg)](https://github.com/annndruha/issue-github-telegram-bot/blob/master/LICENSE)
+[![python lint](https://github.com/annndruha/issue-github-telegram-bot/actions/workflows/linter.yml/badge.svg)](https://github.com/annndruha/issue-github-telegram-bot/actions/workflows/linter.yml/badge.svg)
+
 Only for GitHub organizations repos issues (not for personal repos issues)
 
 #### Example usage:
