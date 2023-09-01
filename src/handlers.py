@@ -3,11 +3,7 @@
 
 import functools
 import logging
-import threading
-import traceback
 
-from gql.transport.exceptions import (TransportAlreadyConnected,
-                                      TransportError, TransportQueryError)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import CallbackContext, ContextTypes
@@ -16,50 +12,18 @@ from src.answers import Answers
 from src.github_api import Github
 from src.issue_message import TgIssueMessage
 from src.settings import Settings
+from src.errors_solver import errors_solver
 
 ans = Answers()
 settings = Settings()
 github = Github(settings)
 
 
-def error_handler(func):
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        try:
-            await func(update, context)
-        except TransportAlreadyConnected as err:
-            logging.warning(f'TransportAlreadyConnected: {err.args}')
-            await context.bot.answer_callback_query(callback_query_id=update.callback_query.id,
-                                                    text='The previous request not done yet.\nPlease wait...')
-        except TransportQueryError as err:
-            logging.warning(f'Failed to proceed Issue: {err}')
-            if 'type' in err.errors[0]:
-                match err.errors[0]['type']:
-                    case 'NOT_FOUND':
-                        text = 'Issue not found. Probably deleted.'
-                        await update.callback_query.edit_message_text(text=text)
-                    case 'FORBIDDEN':
-                        text = 'Issue disabled for this repo'
-                    case 'INSUFFICIENT_SCOPES':
-                        text = err.errors[0]['message'].replace(" Please modify your token's scopes at: https://github.com/settings/tokens.", "").replace("Your token has not been granted the required scopes to execute this query. ", "")
-                    case _:
-                        text = err.errors[0]['message']
-            else:
-                text = err.errors[0]['message']
-            await context.bot.answer_callback_query(callback_query_id=update.callback_query.id, text=text)
-        except TransportError as err:
-            logging.warning(f'TransportError: {err.args}')
-            await context.bot.answer_callback_query(callback_query_id=update.callback_query.id, text=err.args)
-        except Exception as err:
-            logging.error(err)
-            traceback.print_tb(err.__traceback__)
-
-    return wrapper
-
-
 def log_formatter(func):
     """
     Every time for bot event print an actor and handler name. Optional print a message id and callback_data
     """
+
     @functools.wraps(func)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if update.callback_query is None:
@@ -74,7 +38,7 @@ def log_formatter(func):
     return wrapper
 
 
-@error_handler
+@errors_solver
 @log_formatter
 async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.message.chat_id,
@@ -84,7 +48,7 @@ async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    parse_mode=ParseMode('HTML'))
 
 
-@error_handler
+@errors_solver
 @log_formatter
 async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.message.chat_id,
@@ -94,7 +58,7 @@ async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    parse_mode=ParseMode('HTML'))
 
 
-@error_handler
+@errors_solver
 @log_formatter
 async def handler_md_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.message.chat_id,
@@ -108,7 +72,7 @@ async def handler_md_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    disable_web_page_preview=True, )
 
 
-@error_handler
+@errors_solver
 @log_formatter
 async def handler_message(update: Update, context: CallbackContext) -> None:
     """
@@ -135,7 +99,7 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
                                    parse_mode=ParseMode('HTML'))
 
 
-@error_handler
+@errors_solver
 @log_formatter
 async def handler_button(update: Update, context: CallbackContext) -> None:
     """
