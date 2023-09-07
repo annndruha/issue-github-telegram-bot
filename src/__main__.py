@@ -44,7 +44,7 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler('start', handler_start, filters=only_text))
     application.add_handler(CommandHandler('help', handler_help, filters=only_text))
     application.add_handler(CommandHandler('md_guide', handler_md_guide, filters=only_text))
-    application.add_handler(CommandHandler('issue', handler_message, filters=only_text))
+    application.add_handler(CommandHandler('issue', handler_message, filters=only_text | only_caption))
     application.add_handler(CallbackQueryHandler(handler_button))
     application.add_handler(MessageHandler(StartWithBotMention() & only_text, handler_message))
     application.add_handler(MessageHandler(StartWithBotMention() & only_caption, handler_message))
