@@ -8,7 +8,7 @@ from telegram.ext import (ApplicationBuilder, CallbackQueryHandler,
                           CommandHandler, MessageHandler, filters)
 
 from src.handlers import (handler_button, handler_help, handler_md_guide,
-                          handler_message, handler_start)
+                          handler_message, handler_start, native_error_handler)
 from src.settings import Settings
 
 tg_log_handler = logging.FileHandler("issue_tgbot_telegram_updater.log")
@@ -45,4 +45,5 @@ if __name__ == '__main__':
     application.add_handler(CallbackQueryHandler(handler_button))
     application.add_handler(MessageHandler(StartWithBotMention(), handler_message))
     application.add_handler(MessageHandler(filters.ChatType.PRIVATE, handler_message))
+    application.add_error_handler(native_error_handler)
     application.run_polling()
