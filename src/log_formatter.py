@@ -15,13 +15,19 @@ def log_formatter(func):
 
     @functools.wraps(func)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if update.callback_query is None:
-            logging.info(f'[{update.message.from_user.id} {update.message.from_user.full_name}] '
-                         f'[{func.__name__}]: {repr(update.message.text)}')
+        actor_handler = f'[{update.effective_user.id} {update.effective_user.full_name}] [{func.__name__}]'
+        if update.callback_query is not None:
+            logging.info(f'{actor_handler} [callback {update.callback_query.message.id}]: {update.callback_query.data}')
+        elif update.message is not None:
+            if update.message.text is not None:
+                logging.info(f'{actor_handler} [text]: {repr(update.message.text)}')
+            elif update.message.caption is not None:
+                logging.info(f'{actor_handler} [caption]: {repr(update.message.caption)}')
+            else:
+                logging.info(f'{actor_handler} [UNKNOWN MESSAGE TYPE]')
         else:
-            logging.info(f'[{update.callback_query.from_user.id} {update.callback_query.from_user.full_name}] '
-                         f'[{update.callback_query.message.id}] [{func.__name__}] '
-                         f'callback_data: {update.callback_query.data}')
+            logging.info(f'{actor_handler} [UNKNOWN UPDATE TYPE]')
+
         await func(update, context)
 
     return wrapper
