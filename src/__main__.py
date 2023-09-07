@@ -38,12 +38,17 @@ class StartWithBotMention(filters.MessageFilter):
 
 if __name__ == '__main__':
     application = ApplicationBuilder().token(settings.BOT_TOKEN).build()
-    application.add_handler(CommandHandler('start', handler_start))
-    application.add_handler(CommandHandler('help', handler_help))
-    application.add_handler(CommandHandler('md_guide', handler_md_guide))
-    application.add_handler(CommandHandler('issue', handler_message))
+    only_text = filters.UpdateType.MESSAGE & filters.TEXT
+    only_caption = filters.UpdateType.MESSAGE & filters.ATTACHMENT & filters.CAPTION
+
+    application.add_handler(CommandHandler('start', handler_start, filters=only_text))
+    application.add_handler(CommandHandler('help', handler_help, filters=only_text))
+    application.add_handler(CommandHandler('md_guide', handler_md_guide, filters=only_text))
+    application.add_handler(CommandHandler('issue', handler_message, filters=only_text))
     application.add_handler(CallbackQueryHandler(handler_button))
-    application.add_handler(MessageHandler(StartWithBotMention(), handler_message))
-    application.add_handler(MessageHandler(filters.ChatType.PRIVATE, handler_message))
+    application.add_handler(MessageHandler(StartWithBotMention() & only_text, handler_message))
+    application.add_handler(MessageHandler(StartWithBotMention() & only_caption, handler_message))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & only_text, handler_message))
+    application.add_handler(MessageHandler(filters.ChatType.PRIVATE & only_caption, handler_message))
     application.add_error_handler(native_error_handler)
     application.run_polling()

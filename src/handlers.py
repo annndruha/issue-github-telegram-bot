@@ -20,8 +20,8 @@ settings = Settings()
 github = Github(settings)
 
 
-async def native_error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pass
+async def native_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    logging.error("native_error_handler")
 
 
 @errors_solver
