@@ -6,6 +6,7 @@ import logging
 
 from telegram import Update
 from telegram.ext import ContextTypes
+from telegram.helpers import effective_message_type
 
 
 def log_formatter(func):
@@ -24,9 +25,9 @@ def log_formatter(func):
             elif update.message.caption is not None:
                 logging.info(f'{actor_handler} [caption]: {repr(update.message.caption)}')
             else:
-                logging.info(f'{actor_handler} [UNKNOWN MESSAGE TYPE]')
+                logging.info(f'{actor_handler} [UNKNOWN MESSAGE TYPE: {effective_message_type(update)}]')
         else:
-            logging.info(f'{actor_handler} [UNKNOWN UPDATE TYPE]')
+            logging.info(f'{actor_handler} [UNKNOWN UPDATE TYPE: {effective_message_type(update)}]')
 
         await func(update, context)
 

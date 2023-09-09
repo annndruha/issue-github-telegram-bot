@@ -7,7 +7,7 @@ import traceback
 from gql.transport.exceptions import (TransportAlreadyConnected,
                                       TransportError, TransportQueryError)
 from telegram import Update
-from telegram.error import NetworkError
+from telegram.error import TelegramError
 from telegram.ext import ContextTypes
 
 
@@ -20,8 +20,8 @@ def errors_solver(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await func(update, context)
-        except NetworkError:
-            logging.error('Telegram server down again: telegram.error.NetworkError: Bad Gateway')
+        except TelegramError as err:
+            logging.error(f'TelegramError: {str(err.message)}')
         except TransportAlreadyConnected as err:
             logging.warning(f'TransportAlreadyConnected: {err.args}')
             await context.bot.answer_callback_query(callback_query_id=update.callback_query.id,
