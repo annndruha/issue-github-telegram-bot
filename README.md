@@ -40,7 +40,9 @@ Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read
    ```
 6. (Optional, but recommended):
    * Via [BotFather](https://t.me/BotFather) go to `Edit bot`/`Edit commands` and set this commands:
-     * `start - Hello message`
-     * `help - Usage instruction`
-     * `md_guide - Markdown syntax instruction`
+     ```
+     start - Hello message
+     help - Usage instruction
+     md_guide - Markdown syntax instruction
+     ```
    * After this in personal messages with bot you will see a `menu` button
