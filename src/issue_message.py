@@ -1,6 +1,6 @@
 # Marakulin Andrey https://github.com/Annndruha
 # 2023
-# This class used for parsing telegram message and reformat for GitHub markdown
+# This class used for prepare telegram message and parsing back
 import logging
 import re
 
@@ -15,7 +15,6 @@ class TgIssueMessage:
         self.repo_url = None
         self.assigned = None
         self.assigned_url = None
-        self.body = ''
 
         if bot_html is not None:
             self.from_bot_html(bot_html)
@@ -24,34 +23,24 @@ class TgIssueMessage:
         """
         Parse bot issue-message
         """
-        text = self.__replacements(text)
         st = text.split('\n')
         self.issue_url, self.issue_title = self.__extract_href(st[0].removeprefix('🏷'))
         self.repo_url, self.repo_name = self.__extract_href(st[1].removeprefix('🗄').removeprefix('⚠️ '))
         self.assigned_url, self.assigned = self.__extract_href(st[2].removeprefix('👤'))
-        if len(st) > 3:
-            self.body = '\n'.join(st[3:])
 
-    def from_reopen(self, issue_url, title, body=None, login=None):
+    def from_reopen(self, issue_url, title, login=None):
         """
         Parse bot reopen-message
         """
         self.set_issue_url(issue_url)
         self.issue_title = title
-        self.body = body
         self.set_assigned(login)
 
     def from_user(self, text_html):
         """
         Parse user message
         """
-        text = self.__replacements(text_html)
-        if len(text.split('\n')) == 1:
-            self.issue_title = text
-            self.body = ''
-        else:
-            self.issue_title = text.split('\n')[0]
-            self.body = '\n'.join(text.split('\n')[1:])
+        self.issue_title = text_html.split('\n', maxsplit=1)[0].strip()
 
     @staticmethod
     def __extract_href(raw_text):
@@ -62,15 +51,6 @@ class TgIssueMessage:
             text = match.group(1) if match else None
             return url, text
         return None, raw_text
-
-    @staticmethod
-    def __replacements(text):
-        d = {'<span class="tg-spoiler">': '', '</span>': '', '&quot;': '"', "&#x27;": "'", '\n</b>': '</b>\n',
-             '\n</i>': '</i>\n', '\n</u>': '</u>\n', '\n</s>': '</s>\n', '\n</a>': '</a>\n', '\n</pre>': '</pre>\n',
-             '<pre>': '```', '</pre>': '\n```', '\n</code>': '</code>\n'}
-        for k, v in d.items():
-            text = text.replace(k, v).replace(k, v).replace(k, v)
-        return text
 
     @staticmethod
     def __get_link_to_telegram_message(update):
@@ -88,19 +68,19 @@ class TgIssueMessage:
             logging.warning(f"Chat {update.callback_query.message.chat_id} not a supergroup, can't create a msg link.")
             return 'telegram message.'
 
-    def get_gh_body(self, update):
-        link_to_msg = self.__get_link_to_telegram_message(update)
-
-        text = self.body
-        matches = re.findall(r'(<code>)([\s\S]*?)(</code>)', text)
-        for m in matches:
-            s = ''.join(m)
-            if '\n' in s:
-                text = text.replace(s, s.replace('<code>', '```\n').replace('</code>', '\n```\n'))
-            else:
-                text = text.replace(s, s.replace('<code>', '`').replace('</code>', '`'))
-
-        return text + f'\n> Issue open by {update.callback_query.from_user.full_name} via {link_to_msg}'
+    # def get_gh_body(self, update):
+    #     link_to_msg = self.__get_link_to_telegram_message(update)
+    #
+    #     text = self.body
+    #     matches = re.findall(r'(<code>)([\s\S]*?)(</code>)', text)
+    #     for m in matches:
+    #         s = ''.join(m)
+    #         if '\n' in s:
+    #             text = text.replace(s, s.replace('<code>', '```\n').replace('</code>', '\n```\n'))
+    #         else:
+    #             text = text.replace(s, s.replace('<code>', '`').replace('</code>', '`'))
+    #
+    #     return text + f'\n> Issue open by {update.callback_query.from_user.full_name} via {link_to_msg}'
 
     def get_close_message(self, closer_name):
         return f'Issue <a href="{self.issue_url}">{self.issue_title}</a> closed by {closer_name}'
@@ -129,6 +109,4 @@ class TgIssueMessage:
             text += f'\n👤 <a href="{self.assigned_url}">{self.assigned}</a>'
         else:
             text += '\n👤 No assigned'
-        if self.body:
-            text += f'\n{self.body}'
         return text

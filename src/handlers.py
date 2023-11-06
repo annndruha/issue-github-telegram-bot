@@ -18,6 +18,7 @@ from src.settings import Settings
 ans = Answers()
 settings = Settings()
 github = Github(settings)
+HTML = ParseMode('HTML')
 
 
 @errors_solver
@@ -27,7 +28,7 @@ async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    message_thread_id=update.message.message_thread_id,
                                    text=ans.start.format(settings.GH_ORGANIZATION_NICKNAME),
                                    disable_web_page_preview=True,
-                                   parse_mode=ParseMode('HTML'))
+                                   parse_mode=HTML)
 
 
 @errors_solver
@@ -37,7 +38,7 @@ async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    message_thread_id=update.message.message_thread_id,
                                    text=ans.help.format(settings.BOT_NICKNAME),
                                    disable_web_page_preview=True,
-                                   parse_mode=ParseMode('HTML'))
+                                   parse_mode=HTML)
 
 
 @errors_solver
@@ -47,7 +48,7 @@ async def handler_md_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    message_thread_id=update.message.message_thread_id,
                                    text=ans.markdown_guide_tg,
                                    disable_web_page_preview=True,
-                                   parse_mode=ParseMode('HTML'))
+                                   parse_mode=HTML)
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
                                    text=ans.markdown_guide_md,
@@ -72,20 +73,18 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
 
     if len(text_html) == 0:
         text_html = 'Draft issue'
-        # await context.bot.send_message(chat_id=update.message.chat_id,
-        #                                message_thread_id=update.message.message_thread_id,
-        #                                text=ans.no_title)
-        # return
 
     imessage = TgIssueMessage()
     imessage.from_user(text_html)
     keyboard = __get_keyboard_begin(update)
+
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
+                                   reply_to_message_id=update.message.id,
                                    text=imessage.get_text(),
                                    reply_markup=keyboard,
                                    disable_web_page_preview=True,
-                                   parse_mode=ParseMode('HTML'))
+                                   parse_mode=HTML)
 
 
 @errors_solver
@@ -127,7 +126,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
     await update.callback_query.edit_message_text(text=text,
                                                   reply_markup=keyboard,
                                                   disable_web_page_preview=True,
-                                                  parse_mode=ParseMode('HTML'))
+                                                  parse_mode=HTML)
 
 
 def __get_keyboard_begin(update: Update) -> InlineKeyboardMarkup:
@@ -241,7 +240,10 @@ def __create_new_issue(imessage: TgIssueMessage, repo_id: str, update: Update) -
     Open new issue for selected repo_id.
     Return updated bot message and created issue_id
     """
-    r = github.open_issue(repo_id, imessage.issue_title, imessage.get_gh_body(update))
+    gh_body = update.effective_message.reply_to_message.text_markdown_v2
+    # TODO: Prepare cleanup
+
+    r = github.open_issue(repo_id, imessage.issue_title, gh_body)
 
     imessage.set_issue_url(r['createIssue']['issue']['url'])
     issue_id = r['createIssue']['issue']['id']
@@ -311,7 +313,7 @@ def __reopen_issue(update: Update):
         login = r['reopenIssue']['issue']['assignees']['edges'][0]['node']['login']
 
     imessage = TgIssueMessage()
-    imessage.from_reopen(issue_url, title, body, login)
+    imessage.from_reopen(issue_url, title, login)
     logging.info(f'[Issue: {issue_id}] Succeeded Reopen Issue: {imessage.issue_url}')
     return __get_keyboard_begin(update), imessage.get_text()
 
