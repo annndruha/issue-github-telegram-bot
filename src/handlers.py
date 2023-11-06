@@ -19,6 +19,8 @@ ans = Answers()
 settings = Settings()
 github = Github(settings)
 
+MARKDOWN_V2 = ParseMode.MARKDOWN_V2
+
 
 @errors_solver
 @log_formatter
@@ -27,7 +29,7 @@ async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    message_thread_id=update.message.message_thread_id,
                                    text=ans.start.format(settings.GH_ORGANIZATION_NICKNAME),
                                    disable_web_page_preview=True,
-                                   parse_mode=ParseMode('HTML'))
+                                   parse_mode=MARKDOWN_V2)
 
 
 @errors_solver
@@ -37,7 +39,7 @@ async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    message_thread_id=update.message.message_thread_id,
                                    text=ans.help.format(settings.BOT_NICKNAME),
                                    disable_web_page_preview=True,
-                                   parse_mode=ParseMode('HTML'))
+                                   parse_mode=MARKDOWN_V2)
 
 
 @errors_solver
@@ -47,7 +49,7 @@ async def handler_md_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    message_thread_id=update.message.message_thread_id,
                                    text=ans.markdown_guide_tg,
                                    disable_web_page_preview=True,
-                                   parse_mode=ParseMode('HTML'))
+                                   parse_mode=MARKDOWN_V2)
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
                                    text=ans.markdown_guide_md,
@@ -61,31 +63,32 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
     Receive a private user message or group-chat bot mention
     and reply with issue template (or no title warning message).
     """
-    if update.message.text_html is not None:
-        text_html = update.message.text_html
-    elif update.message.caption_html is not None:
-        text_html = update.message.caption_html
+    if update.message.text_markdown_v2 is not None:
+        text_md = update.message.text_markdown_v2
+    elif update.message.caption_markdown_v2 is not None:
+        text_md = update.message.caption_markdown_v2
     else:
         return
 
-    text_html = text_html.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
+    text_md = text_md.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
 
-    if len(text_html) == 0:
-        text_html = 'Draft issue'
+    if len(text_md) == 0:
+        text_md = 'Draft issue'
         # await context.bot.send_message(chat_id=update.message.chat_id,
         #                                message_thread_id=update.message.message_thread_id,
         #                                text=ans.no_title)
         # return
 
     imessage = TgIssueMessage()
-    imessage.from_user(text_html)
+    imessage.from_user(text_md)
     keyboard = __get_keyboard_begin(update)
+    gggg = imessage.get_text()
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
                                    text=imessage.get_text(),
                                    reply_markup=keyboard,
                                    disable_web_page_preview=True,
-                                   parse_mode=ParseMode('HTML'))
+                                   parse_mode=MARKDOWN_V2)
 
 
 @errors_solver
@@ -100,7 +103,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
     """
     callback_data = update.callback_query.data
     action = callback_data.split('_', 1)[0]
-    text = update.callback_query.message.text_html
+    text = update.callback_query.message.text_markdown_v2
 
     match action:
         case 'quite':
@@ -127,7 +130,7 @@ async def handler_button(update: Update, context: CallbackContext) -> None:
     await update.callback_query.edit_message_text(text=text,
                                                   reply_markup=keyboard,
                                                   disable_web_page_preview=True,
-                                                  parse_mode=ParseMode('HTML'))
+                                                  parse_mode=MARKDOWN_V2)
 
 
 def __get_keyboard_begin(update: Update) -> InlineKeyboardMarkup:
@@ -226,7 +229,7 @@ def __create_issue(update: Update):
     user want to create a new issue or change repository for existing issue
     """
     repo_id = update.callback_query.data.split('_', 1)[1]
-    imessage = TgIssueMessage(bot_html=update.callback_query.message.text_html)
+    imessage = TgIssueMessage(bot_html=update.callback_query.message.text_markdown_v2)
     issue_id = __search_issue_id_in_keyboard(update)
 
     if issue_id is None:
@@ -275,7 +278,7 @@ def __set_assign(update: Update) -> (InlineKeyboardMarkup, str):
     r = github.set_assignee(issue_id, member_id)
 
     new_assigned = r['updateIssue']['issue']['assignees']['edges'][0]['node']['login']
-    imessage = TgIssueMessage(bot_html=update.callback_query.message.text_html)
+    imessage = TgIssueMessage(bot_html=update.callback_query.message.text_markdown_v2)
     imessage.set_assigned(new_assigned)
     logging.info(f'[Issue: {issue_id}] Set assign to [{new_assigned} {member_id}]')
     return __get_keyboard_setup(issue_id), imessage.get_text()
@@ -288,7 +291,7 @@ def __close_issue(update: Update):
     issue_id = __search_issue_id_in_keyboard(update)
     github.close_issue(issue_id)
 
-    imessage = TgIssueMessage(bot_html=update.callback_query.message.text_html)
+    imessage = TgIssueMessage(bot_html=update.callback_query.message.text_markdown_v2)
     text = imessage.get_close_message(update.callback_query.from_user.full_name)
 
     logging.info(f'[Issue: {issue_id}] Succeeded closed {imessage.issue_url}')

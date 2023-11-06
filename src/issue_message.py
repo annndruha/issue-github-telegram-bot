@@ -5,6 +5,7 @@ import logging
 import re
 
 from telegram.constants import ChatType
+from telegram.helpers import escape_markdown
 
 
 class TgIssueMessage:
@@ -41,17 +42,18 @@ class TgIssueMessage:
         self.body = body
         self.set_assigned(login)
 
-    def from_user(self, text_html):
+    def from_user(self, text_md):
         """
         Parse user message
         """
-        text = self.__replacements(text_html)
+        text = self.__replacements(text_md)
         if len(text.split('\n')) == 1:
-            self.issue_title = text
+            self.issue_title = text.strip()
             self.body = ''
         else:
-            self.issue_title = text.split('\n')[0]
-            self.body = '\n'.join(text.split('\n')[1:])
+            splitted = text.split('\n', maxsplit=1)
+            self.issue_title = splitted[0].strip()
+            self.body = splitted[1]
 
     @staticmethod
     def __extract_href(raw_text):
@@ -65,9 +67,7 @@ class TgIssueMessage:
 
     @staticmethod
     def __replacements(text):
-        d = {'<span class="tg-spoiler">': '', '</span>': '', '&quot;': '"', "&#x27;": "'", '\n</b>': '</b>\n',
-             '\n</i>': '</i>\n', '\n</u>': '</u>\n', '\n</s>': '</s>\n', '\n</a>': '</a>\n', '\n</pre>': '</pre>\n',
-             '<pre>': '```', '</pre>': '\n```', '\n</code>': '</code>\n'}
+        d = {'```\n': '\n```'}
         for k, v in d.items():
             text = text.replace(k, v).replace(k, v).replace(k, v)
         return text
@@ -79,7 +79,7 @@ class TgIssueMessage:
             message_thread_id = 1 if message_thread_id is None else message_thread_id  # If 'None' set '1'
             chat_id = str(update.callback_query.message.chat_id)
             message_id = update.callback_query.message.message_id
-            return f"""<a href="https://t.me/c/{chat_id[4:]}/{message_thread_id}/{message_id}">telegram message.</a>"""
+            return f"[telegram message.](https://t.me/c/{chat_id[4:]}/{message_thread_id}/{message_id})"
         elif update.callback_query.message.chat.type == ChatType.GROUP:
             return 'group-chat message.'
         elif update.callback_query.message.chat.type == ChatType.PRIVATE:
@@ -92,18 +92,18 @@ class TgIssueMessage:
         link_to_msg = self.__get_link_to_telegram_message(update)
 
         text = self.body
-        matches = re.findall(r'(<code>)([\s\S]*?)(</code>)', text)
-        for m in matches:
-            s = ''.join(m)
-            if '\n' in s:
-                text = text.replace(s, s.replace('<code>', '```\n').replace('</code>', '\n```\n'))
-            else:
-                text = text.replace(s, s.replace('<code>', '`').replace('</code>', '`'))
+        # matches = re.findall(r'(<code>)([\s\S]*?)(</code>)', text)
+        # for m in matches:
+        #     s = ''.join(m)
+        #     if '\n' in s:
+        #         text = text.replace(s, s.replace('<code>', '```\n').replace('</code>', '\n```\n'))
+        #     else:
+        #         text = text.replace(s, s.replace('<code>', '`').replace('</code>', '`'))
 
         return text + f'\n> Issue open by {update.callback_query.from_user.full_name} via {link_to_msg}'
 
     def get_close_message(self, closer_name):
-        return f'Issue <a href="{self.issue_url}">{self.issue_title}</a> closed by {closer_name}'
+        return f'Issue [{self.issue_title}]({self.issue_url}) closed by {closer_name}'
 
     def set_issue_url(self, issue_url):
         self.issue_url = issue_url
@@ -118,17 +118,17 @@ class TgIssueMessage:
     def get_text(self):
         text = ''
         if self.issue_url:
-            text += f'🏷 <a href="{self.issue_url}">{self.issue_title}</a>'
+            text += f'🏷 [{self.issue_title}]({self.issue_url})'
         else:
             text += '🏷 ' + self.issue_title
         if self.repo_url:
-            text += f'\n🗄 <a href="{self.repo_url}">{self.repo_name}</a>'
+            text += f'\n🗄 [{self.repo_name}]({self.repo_url})'
         else:
             text += '\n⚠️ No repo'
         if self.assigned_url:
-            text += f'\n👤 <a href="{self.assigned_url}">{self.assigned}</a>'
+            text += f'\n👤 [{self.assigned}]({self.assigned_url})'
         else:
             text += '\n👤 No assigned'
         if self.body:
             text += f'\n{self.body}'
-        return text
+        return escape_markdown(text, version=2, entity_type='text_link')
