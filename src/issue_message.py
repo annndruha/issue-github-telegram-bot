@@ -36,11 +36,11 @@ class TgIssueMessage:
         self.issue_title = title
         self.set_assigned(login)
 
-    def from_user(self, text_html):
+    def from_user(self, text):
         """
         Parse user message
         """
-        self.issue_title = text_html.split('\n', maxsplit=1)[0].strip()
+        self.issue_title = text.split('\n', maxsplit=1)[0].strip()
 
     @staticmethod
     def __extract_href(raw_text):
@@ -49,8 +49,8 @@ class TgIssueMessage:
             url = match.group(1)
             match = re.search(r'>(.*?)</a>', raw_text)
             text = match.group(1) if match else None
-            return url, text
-        return None, raw_text
+            return url.strip(), text.strip()
+        return None, raw_text.strip()
 
     @staticmethod
     def __get_link_to_telegram_message(update):
