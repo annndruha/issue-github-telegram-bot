@@ -62,20 +62,20 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
     Receive a private user message or group-chat bot mention
     and reply with issue template (or no title warning message).
     """
-    if update.message.text_html is not None:
-        text_html = update.message.text_html
-    elif update.message.caption_html is not None:
-        text_html = update.message.caption_html
+    if update.message.text is not None:
+        text = update.message.text
+    elif update.message.caption is not None:
+        text = update.message.caption
     else:
         return
 
-    text_html = text_html.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
+    text = text.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
 
-    if len(text_html) == 0:
-        text_html = 'Draft issue'
+    if len(text) == 0:
+        text = 'Draft issue'
 
     imessage = TgIssueMessage()
-    imessage.from_user(text_html)
+    imessage.from_user(text)
     keyboard = __get_keyboard_begin(update)
 
     await context.bot.send_message(chat_id=update.message.chat_id,
@@ -235,14 +235,34 @@ def __create_issue(update: Update):
     return __get_keyboard_setup(issue_id), imessage.get_text()
 
 
+def __get_github_body(update):
+    if update.effective_message.reply_to_message is None:
+        logging.error('update.effective_message.reply_to_message is None! Is it possible?')
+        return ''
+
+    if update.effective_message.reply_to_message.text_markdown_v2 is not None:
+        text_md = update.effective_message.reply_to_message.text_markdown_v2
+    elif update.effective_message.reply_to_message.caption_markdown_v2 is not None:
+        text_md = update.effective_message.reply_to_message.caption_markdown_v2
+    else:
+        return ''
+
+    text_md = text_md.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
+
+    if len(text_md) == 0 or len(text_md.split('\n')) == 1:
+        return ''
+
+    text_md = text_md.split('\n', maxsplit=1)[1]
+    text_md = text_md.replace('```\n', '\n```\n')
+    return text_md
+
+
 def __create_new_issue(imessage: TgIssueMessage, repo_id: str, update: Update) -> (InlineKeyboardMarkup, str):
     """
     Open new issue for selected repo_id.
     Return updated bot message and created issue_id
     """
-    text_md = update.effective_message.reply_to_message.text_markdown_v2
-    text_md = text_md.split('\n', maxsplit=1)[1]
-    text_md = text_md.replace('```\n', '\n```\n')
+    text_md = __get_github_body(update)
 
     r = github.open_issue(repo_id, imessage.issue_title, text_md)
 
