@@ -240,10 +240,11 @@ def __create_new_issue(imessage: TgIssueMessage, repo_id: str, update: Update) -
     Open new issue for selected repo_id.
     Return updated bot message and created issue_id
     """
-    gh_body = update.effective_message.reply_to_message.text_markdown_v2
-    # TODO: Prepare cleanup
+    text_md = update.effective_message.reply_to_message.text_markdown_v2
+    text_md = text_md.split('\n', maxsplit=1)[1]
+    text_md = text_md.replace('```\n', '\n```\n')
 
-    r = github.open_issue(repo_id, imessage.issue_title, gh_body)
+    r = github.open_issue(repo_id, imessage.issue_title, text_md)
 
     imessage.set_issue_url(r['createIssue']['issue']['url'])
     issue_id = r['createIssue']['issue']['id']
