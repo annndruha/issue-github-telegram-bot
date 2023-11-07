@@ -137,11 +137,14 @@ def __get_keyboard_begin(update: Update) -> InlineKeyboardMarkup:
         return InlineKeyboardMarkup([[InlineKeyboardButton('Setup', callback_data=f'setup_{issue_id}')]])
 
 
-def __get_keyboard_setup(issue_id: str) -> InlineKeyboardMarkup:
+def __get_keyboard_setup(issue_id: str, hide_buttons=False) -> InlineKeyboardMarkup:
     """
     Setup keyboard for setup existed issue.
     return keyboard with 4 buttons: hide setup, change repo, change assign and close issue
     """
+    if hide_buttons:
+        return InlineKeyboardMarkup([[InlineKeyboardButton('Setup', callback_data=f'setup_{issue_id}')]])
+
     return InlineKeyboardMarkup([[InlineKeyboardButton('↩️', callback_data=f'quite_{issue_id}'),
                                   InlineKeyboardButton('🗄 ', callback_data='rps_start'),
                                   InlineKeyboardButton('👤', callback_data='members_start'),
@@ -227,7 +230,7 @@ def __create_issue(update: Update):
         imessage, issue_id = __create_new_issue(imessage, repo_id, update)
     else:
         imessage, issue_id = __transfer_exist_issue(imessage, repo_id, issue_id)
-    return __get_keyboard_setup(issue_id), imessage.get_text()
+    return __get_keyboard_setup(issue_id, hide_buttons=True), imessage.get_text()
 
 
 def __create_new_issue(imessage: TgIssueMessage, repo_id: str, update: Update) -> (InlineKeyboardMarkup, str):
@@ -274,7 +277,7 @@ def __set_assign(update: Update) -> (InlineKeyboardMarkup, str):
     imessage = TgIssueMessage(bot_html=update.callback_query.message.text_html)
     imessage.set_assigned(new_assigned)
     logging.info(f'[Issue: {issue_id}] Set assign to [{new_assigned} {member_id}]')
-    return __get_keyboard_setup(issue_id), imessage.get_text()
+    return __get_keyboard_setup(issue_id, hide_buttons=True), imessage.get_text()
 
 
 def __close_issue(update: Update):
