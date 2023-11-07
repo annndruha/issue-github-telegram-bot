@@ -1,4 +1,4 @@
-## Bot for creation GitHub issue from Telegram chat
+# Bot for creation GitHub issue from Telegram chat
 
 [![version](https://img.shields.io/github/v/release/annndruha/issue-github-telegram-bot)](https://github.com/annndruha/issue-github-telegram-bot/releases)
 [![GitHub license](https://img.shields.io/github/license/annndruha/issue-github-telegram-bot.svg)](https://github.com/annndruha/issue-github-telegram-bot/blob/master/LICENSE)
@@ -6,13 +6,12 @@
 
 Only for GitHub organizations repos issues (not for personal repos issues)
 
-#### Example usage:
+# Example usage:
 
-In organization Telegram chat mention bot and write issue title (and optional description)
-![image](https://github.com/annndruha/issue-github-telegram-bot/assets/51162917/26d7e781-b1d8-40d7-9dd2-ca72afdb92d8)
+In organization Telegram chat type `/issue` and write issue title (and optional description). Select repo and enjoy your issue!
+![image](https://github.com/annndruha/issue-github-telegram-bot/assets/51162917/663f59e5-03ea-413e-a727-d33e7351d2e7)
 
-
-#### Setup
+# Setup
 
 1. You need to create telegram bot via [BotFather](https://t.me/BotFather), get bot token and add it to group chat with access messages rights.
 2. Use your personal GitHub account or create another account, get [GitHub token](https://github.com/settings/tokens).
