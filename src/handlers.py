@@ -301,7 +301,6 @@ def __reopen_issue(update: Update):
 
     issue_url = r['reopenIssue']['issue']['url']
     title = r['reopenIssue']['issue']['title']
-    body = r['reopenIssue']['issue']['body'].split('\n> Issue open by')[0]
     login = None
     if len(r['reopenIssue']['issue']['assignees']['edges']) != 0:
         login = r['reopenIssue']['issue']['assignees']['edges'][0]['node']['login']
