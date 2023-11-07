@@ -36,7 +36,7 @@ async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
-                                   text=ans.help.format(settings.BOT_NICKNAME),
+                                   text=ans.help,
                                    disable_web_page_preview=True,
                                    parse_mode=HTML)
 

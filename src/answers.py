@@ -12,12 +12,8 @@ class Answers:
     help = 'For create an issue, mention me and enter the title of the issue.' \
            '\nIf you want to provide a description, after the title break the line and write a ' \
            'description. Below is an example of a message to create an issue:' \
-           '\n\n{} Issue title\nDescription of issue\nSee more by calling the bot command: /md_guide'
+           '\n\n/issue Issue title\nDescription of issue\nSee more by calling the bot command: /md_guide'
     no_title = 'After the mention, you need to enter the title of the issue. More in /help'
-    # issue_open = '\n> Issue open by {} via {}'
-    # assign_change = '\n> Assign changed from {} to @{} by {}.'
-    # issue_close = '\n> Issue closed by {}.'
-    # issue_reopen = '\n> Issue reopened by {}.'
     markdown_guide_tg = 'Supported Telegram styling which will be properly converted to GitHub Markdown:' \
                         '\n\n<i>italic</i>' \
                         '\n<b>bold</b>' \
