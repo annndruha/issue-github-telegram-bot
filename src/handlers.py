@@ -69,11 +69,6 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
     else:
         return
 
-    text = text.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
-
-    if len(text) == 0:
-        text = 'Draft issue'
-
     imessage = TgIssueMessage()
     imessage.from_user(text)
     keyboard = __get_keyboard_begin(update)
@@ -235,36 +230,14 @@ def __create_issue(update: Update):
     return __get_keyboard_setup(issue_id), imessage.get_text()
 
 
-def __get_github_body(update):
-    if update.effective_message.reply_to_message is None:
-        logging.error('update.effective_message.reply_to_message is None! Is it possible?')
-        return ''
-
-    if update.effective_message.reply_to_message.text_markdown_v2 is not None:
-        text_md = update.effective_message.reply_to_message.text_markdown_v2
-    elif update.effective_message.reply_to_message.caption_markdown_v2 is not None:
-        text_md = update.effective_message.reply_to_message.caption_markdown_v2
-    else:
-        return ''
-
-    text_md = text_md.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
-
-    if len(text_md) == 0 or len(text_md.split('\n')) == 1:
-        return ''
-
-    text_md = text_md.split('\n', maxsplit=1)[1]
-    text_md = text_md.replace('```\n', '\n```\n')
-    return text_md
-
-
 def __create_new_issue(imessage: TgIssueMessage, repo_id: str, update: Update) -> (InlineKeyboardMarkup, str):
     """
     Open new issue for selected repo_id.
     Return updated bot message and created issue_id
     """
-    text_md = __get_github_body(update)
+    body = TgIssueMessage.get_github_body(update)
 
-    r = github.open_issue(repo_id, imessage.issue_title, text_md)
+    r = github.open_issue(repo_id, imessage.issue_title, body)
 
     imessage.set_issue_url(r['createIssue']['issue']['url'])
     issue_id = r['createIssue']['issue']['id']
