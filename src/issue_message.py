@@ -6,6 +6,10 @@ import re
 
 from telegram.constants import ChatType
 
+from src.settings import Settings
+
+settings = Settings()
+
 
 class TgIssueMessage:
     def __init__(self, bot_html=None):
@@ -40,7 +44,11 @@ class TgIssueMessage:
         """
         Parse user message
         """
-        self.issue_title = text.split('\n', maxsplit=1)[0].strip()
+        text = text.split('\n', maxsplit=1)[0].strip()
+        text = text.removeprefix('/issue').removeprefix(settings.BOT_NICKNAME).strip()
+        if len(text) == 0:
+            text = 'Empty title'
+        self.issue_title = text
 
     @staticmethod
     def __extract_href(raw_text):
@@ -53,34 +61,42 @@ class TgIssueMessage:
         return None, raw_text.strip()
 
     @staticmethod
-    def __get_link_to_telegram_message(update):
+    def get_link_to_telegram_message(update):
+        base = f'> Issue open by {update.callback_query.from_user.full_name} via '
         if update.callback_query.message.chat.type == ChatType.SUPERGROUP:
-            message_thread_id = update.callback_query.message.message_thread_id
-            message_thread_id = 1 if message_thread_id is None else message_thread_id  # If 'None' set '1'
-            chat_id = str(update.callback_query.message.chat_id)
-            message_id = update.callback_query.message.message_id
-            return f"""<a href="https://t.me/c/{chat_id[4:]}/{message_thread_id}/{message_id}">telegram message.</a>"""
+            # There are some telegram problem with main topic, message_thread_id of main topic is strange number,
+            # while others topics id are fine
+            return base + f"[telegram message.]({update.callback_query.message.link})\n\n"
         elif update.callback_query.message.chat.type == ChatType.GROUP:
-            return 'group-chat message.'
+            return base + 'group-chat message.\n\n'
         elif update.callback_query.message.chat.type == ChatType.PRIVATE:
-            return 'personal telegram message.'
+            return base + 'personal telegram message.\n\n'
         else:
             logging.warning(f"Chat {update.callback_query.message.chat_id} not a supergroup, can't create a msg link.")
-            return 'telegram message.'
+            return base + 'telegram message.\n\n'
 
-    # def get_gh_body(self, update):
-    #     link_to_msg = self.__get_link_to_telegram_message(update)
-    #
-    #     text = self.body
-    #     matches = re.findall(r'(<code>)([\s\S]*?)(</code>)', text)
-    #     for m in matches:
-    #         s = ''.join(m)
-    #         if '\n' in s:
-    #             text = text.replace(s, s.replace('<code>', '```\n').replace('</code>', '\n```\n'))
-    #         else:
-    #             text = text.replace(s, s.replace('<code>', '`').replace('</code>', '`'))
-    #
-    #     return text + f'\n> Issue open by {update.callback_query.from_user.full_name} via {link_to_msg}'
+    @staticmethod
+    def get_github_body(update):
+        link_to_msg = TgIssueMessage.get_link_to_telegram_message(update)
+        if update.effective_message.reply_to_message.text_markdown_v2 is not None:
+            text = update.effective_message.reply_to_message.text_markdown_v2
+        elif update.effective_message.reply_to_message.caption_html is not None:
+            text = update.effective_message.reply_to_message.text_markdown_v2
+        else:
+            return link_to_msg
+
+        if len(text.split('\n')) == 1:
+            return link_to_msg
+
+        title, body = text.split('\n', maxsplit=1)
+
+        if len(body.strip()) == 0:
+            return link_to_msg
+
+        body = body.replace('```\n', '\n```\n')  # Format code block correctly
+        for char in "\\`*_{}[]<>()#+-.!|":  # Anti-escape markdown
+            body = body.replace('\\' + char, char)
+        return link_to_msg + body
 
     def get_close_message(self, closer_name):
         return f'Issue <a href="{self.issue_url}">{self.issue_title}</a> closed by {closer_name}'
