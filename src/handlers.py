@@ -18,7 +18,8 @@ from src.settings import Settings
 ans = Answers()
 settings = Settings()
 github = Github(settings)
-HTML = ParseMode('HTML')
+HTML = ParseMode.HTML
+MARKDOWN_V2 = ParseMode.MARKDOWN_V2
 
 
 @errors_solver
@@ -34,11 +35,12 @@ async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @errors_solver
 @log_formatter
 async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.message.chat_id,
-                                   message_thread_id=update.message.message_thread_id,
-                                   text=ans.help,
-                                   disable_web_page_preview=True,
-                                   parse_mode=HTML)
+    for text in [ans.help, ans.help_example, ans.help_example2, ans.help_example3.format(settings.BOT_NICKNAME)]:
+        await context.bot.send_message(chat_id=update.message.chat_id,
+                                       message_thread_id=update.message.message_thread_id,
+                                       text=text,
+                                       disable_web_page_preview=True,
+                                       parse_mode=HTML)
 
 
 @errors_solver
@@ -52,7 +54,7 @@ async def handler_md_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.message.chat_id,
                                    message_thread_id=update.message.message_thread_id,
                                    text=ans.markdown_guide_md,
-                                   disable_web_page_preview=True, )
+                                   disable_web_page_preview=True)
 
 
 @errors_solver
