@@ -94,6 +94,8 @@ class TgIssueMessage:
             return link_to_msg
 
         body = body.replace('```\n', '\n```\n')  # Format code block correctly
+        if body.endswith('```'):  # If "```" at end of text, line above not works correctly
+            body = body[:-3] + '\n```'
         for char in "\\`*_{}[]<>()#+-.!|":  # Anti-escape markdown
             body = body.replace('\\' + char, char)
         return link_to_msg + body
