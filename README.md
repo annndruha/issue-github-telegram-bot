@@ -9,7 +9,8 @@ Only for GitHub organizations repos issues (not for personal repos issues)
 # Example usage:
 
 In organization Telegram chat type `/issue` and write issue title (and optional description). Select repo and enjoy your issue!
-![image](https://github.com/annndruha/issue-github-telegram-bot/assets/51162917/663f59e5-03ea-413e-a727-d33e7351d2e7)
+![image](https://github.com/annndruha/issue-github-telegram-bot/assets/51162917/8eb3c8ee-b87b-4144-9846-6e9b8bce80b0)
+
 
 # Setup
 
