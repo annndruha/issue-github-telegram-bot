@@ -18,7 +18,7 @@ In organization Telegram chat type `/issue` and write issue title (and optional 
 2. Use your personal GitHub account or create another account, get [GitHub token](https://github.com/settings/tokens).
 Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read:user`. Add account to your GitHub orgainzation.
 
-3. Next setup the GitHub environment (or just run with docker command is step 4):
+3. *[Option 1]*: Setup the GitHub runner Enviroment (see [deploy.yml](https://github.com/profcomff/issue-github-tgbot/blob/main/.github/workflows/deploy.yml)):
 
    secrets:
      * `BOT_TOKEN` - From step 1
@@ -28,11 +28,11 @@ Token scopes must include: `repo (full)`, `admin:org -> read:org`, `user -> read
    variables:
    * `GH_ORGANIZATION_NICKNAME` - Organization login (nickname) for manage issue
 
-5. Run Docker (Or use github-runner with [deploy.yml](https://github.com/profcomff/issue-github-tgbot) and GitHub Enviroments):
+5. *[Option 2]*: Simple Docker run without GitHub runner:
    ```commandline
    docker run  --detach \
                --restart always \
-               --env BOT_TOKEN='352532:token_value_from_botFather' \
+               --env BOT_TOKEN='000000:token_value_from_botFather' \
                --env BOT_NICKNAME='@nickname_from_botFather' \
                --env GH_ACCOUNT_TOKEN='github_user_token' \
                --env GH_ORGANIZATION_NICKNAME='org_login' \
