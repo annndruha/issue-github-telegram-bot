@@ -80,8 +80,8 @@ class TgIssueMessage:
         link_to_msg = TgIssueMessage.get_link_to_telegram_message(update)
         if update.effective_message.reply_to_message.text_markdown_v2 is not None:
             text = update.effective_message.reply_to_message.text_markdown_v2
-        elif update.effective_message.reply_to_message.caption_html is not None:
-            text = update.effective_message.reply_to_message.text_markdown_v2
+        elif update.effective_message.reply_to_message.caption_markdown_v2 is not None:
+            text = update.effective_message.reply_to_message.caption_markdown_v2
         else:
             return link_to_msg
 
