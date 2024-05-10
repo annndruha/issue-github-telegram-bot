@@ -25,36 +25,24 @@ MARKDOWN_V2 = ParseMode.MARKDOWN_V2
 @errors_solver
 @log_formatter
 async def handler_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.message.chat_id,
-                                   message_thread_id=update.message.message_thread_id,
-                                   text=ans.start.format(settings.GH_ORGANIZATION_NICKNAME),
-                                   disable_web_page_preview=True,
-                                   parse_mode=HTML)
+    await update.message.reply_html(text=ans.start.format(settings.GH_ORGANIZATION_NICKNAME),
+                                    disable_web_page_preview=True)
 
 
 @errors_solver
 @log_formatter
 async def handler_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    for text in [ans.help, ans.help_example, ans.help_example2, ans.help_example3.format(settings.BOT_NICKNAME)]:
-        await context.bot.send_message(chat_id=update.message.chat_id,
-                                       message_thread_id=update.message.message_thread_id,
-                                       text=text,
-                                       disable_web_page_preview=True,
-                                       parse_mode=HTML)
+    await update.message.reply_html(text=ans.help.format(settings.BOT_NICKNAME),
+                                    disable_web_page_preview=True)
 
 
 @errors_solver
 @log_formatter
 async def handler_md_guide(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.message.chat_id,
-                                   message_thread_id=update.message.message_thread_id,
-                                   text=ans.markdown_guide_tg,
-                                   disable_web_page_preview=True,
-                                   parse_mode=HTML)
-    await context.bot.send_message(chat_id=update.message.chat_id,
-                                   message_thread_id=update.message.message_thread_id,
-                                   text=ans.markdown_guide_md,
-                                   disable_web_page_preview=True)
+    await update.message.reply_html(text=ans.markdown_guide_tg,
+                                    disable_web_page_preview=True)
+    await update.message.reply_html(text=ans.markdown_guide_md,
+                                    disable_web_page_preview=True)
 
 
 @errors_solver
@@ -75,13 +63,9 @@ async def handler_message(update: Update, context: CallbackContext) -> None:
     imessage.from_user(text)
     keyboard = __get_keyboard_begin(update)
 
-    await context.bot.send_message(chat_id=update.message.chat_id,
-                                   message_thread_id=update.message.message_thread_id,
-                                   reply_to_message_id=update.message.id,
-                                   text=imessage.get_text(),
-                                   reply_markup=keyboard,
-                                   disable_web_page_preview=True,
-                                   parse_mode=HTML)
+    await update.message.reply_html(text=imessage.get_text(),
+                                    reply_markup=keyboard,
+                                    disable_web_page_preview=True)
 
 
 @errors_solver

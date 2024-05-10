@@ -64,8 +64,6 @@ class TgIssueMessage:
     def get_link_to_telegram_message(update):
         base = f'> Issue open by {update.callback_query.from_user.full_name} via '
         if update.callback_query.message.chat.type == ChatType.SUPERGROUP:
-            # There are some telegram problem with main topic, message_thread_id of main topic is strange number,
-            # while others topics id are fine
             return base + f"[telegram message.]({update.callback_query.message.link})\n\n"
         elif update.callback_query.message.chat.type == ChatType.GROUP:
             return base + 'group-chat message.\n\n'

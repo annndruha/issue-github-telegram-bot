@@ -11,11 +11,11 @@ class Answers:
             ' directly from this chat. \nMore info in /help'
     help = 'For create an issue, mention me or call /issue and enter the title of the issue. ' \
            'If you want to provide a description, break the line after title and write a ' \
-           'description. See more in markdown guide: /md_guide\n\n<b>Examples how to call me:</b>'
-    help_example = '/issue Just only title'
-    help_example2 = '/issue Issue title\nText description of issue\n'
-    help_example3 = '{} Issue title\nCall via mention, and long description with some code example:\n' \
-                    '```python\nimport bug\nbug.fix()\n```'
+           'description. See more in markdown guide: /md_guide\n\n<b>Examples how to call me:</b>\n\n' \
+           '/issue Just only title\n\n' \
+           '/issue Issue title\nText description of issue\n\n'  \
+           '{} Issue title\nCall via mention, and long description with some code example:\n' \
+           '```python\nimport bug\nbug.fix()\n```'
     no_title = 'After the mention, you need to enter the title of the issue. More in /help'
     markdown_guide_tg = 'Supported Telegram styling which will be properly converted to GitHub Markdown:' \
                         '\n\n<i>italic</i>' \
